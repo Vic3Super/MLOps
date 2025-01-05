@@ -1,0 +1,25 @@
+# Ignore Python cache files
+*.pyc
+__pycache__/
+
+# Ignore local environment files
+.env
+
+# Ignore version control
+.git
+.gitignore
+
+# Ignore build configuration
+cloudbuild.yaml
+
+CloudFunction
+
+notebooks
+
+taxi_trips.csv
+
+commands
+
+# Ignore Docker-related files not needed in the image
+Dockerfile
+docker-compose.yml

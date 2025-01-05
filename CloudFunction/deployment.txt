@@ -1,0 +1,6 @@
+gcloud functions deploy data_drift_analysis `
+     --runtime python311 `
+     --trigger-http `
+     --allow-unauthenticated `
+     --entry-point cloud_function_entry_point `
+     --memory 512MB

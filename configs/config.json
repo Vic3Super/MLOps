@@ -1,0 +1,8 @@
+{
+    "GCS_REQUIREMENTS_PATH": "gs://mlflow-bucket-1998/mlruns/2/0d73288a96d84fe5b8f4ca6219bb3df9/artifacts/model/requirements.txt",
+    "MODEL_PATH": "gs://mlflow-bucket-1998/mlruns/2/0d73288a96d84fe5b8f4ca6219bb3df9/artifacts/model",
+    "PROJECT_ID": "carbon-relic-439014-t0",
+    "REGION": "us-west1",
+    "DATASET_NAME": "chicago_taxi",
+    "RUN_ID": "gs://mlflow-bucket-1998/mlruns/2/0d73288a96d84fe5b8f4ca6219bb3df9"
+}

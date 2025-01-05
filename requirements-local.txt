@@ -1,0 +1,11 @@
+flask
+mlflow
+pandas
+google-cloud-storage
+google-cloud-bigquery
+google-cloud-bigquery-storage
+scikit-learn==1.5.2
+xgboost==2.1.3
+numpy
+matplotlib
+db-dtypes

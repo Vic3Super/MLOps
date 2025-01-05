@@ -1,0 +1,37 @@
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Docker Image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
+      - '.'
+
+  # Step 2: Push the Docker image to Google Container Registry (GCR)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Docker Image to GCR'
+    args:
+      - 'push'
+      - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
+
+  # Step 3: Deploy to Google Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Deploy to Cloud Run'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'my-mlflow-app'
+      - '--image'
+      - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'us-west1'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '1Gi'
+
+# Optional: Specify the region for Google Cloud Build logs
+options:
+  logging: CLOUD_LOGGING_ONLY

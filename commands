@@ -1,0 +1,19 @@
+$env:MODEL_PATH="gs://mlflow-bucket-1998/mlruns/2/0d73288a96d84fe5b8f4ca6219bb3df9/artifacts/model"
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\Users\User\MLFlowGoogle\pythonProject\CloudRun\keys.json"
+
+
+ docker build -t my-mlflow-app `
+     --build-arg GCS_REQUIREMENTS_PATH=gs://mlflow-bucket-1998/mlruns/2/0d73288a96d84fe5b8f4ca6219bb3df9/artifacts/model/requirements.txt .
+
+ docker build -t my-mlflow-app .
+
+  docker run -p 8080:8080 `
+     -e PORT=8080 `
+     -e MODEL_PATH=$env:MODEL_PATH `
+     -e GOOGLE_APPLICATION_CREDENTIALS="/app/keys.json" `
+     -v "C:\Users\User\MLFlowGoogle\pythonProject\CloudRun\keys.json:/app/keys.json" `
+     my-mlflow-app
+
+
+ docker build -t my-mlflow-app `
+     --build-arg GCS_REQUIREMENTS_PATH=gs://mlflow-bucket-1998/mlruns/2/0d73288a96d84fe5b8f4ca6219bb3df9/artifacts/model/requirements.txt .

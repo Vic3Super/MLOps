@@ -1,0 +1,4 @@
+taxi_trips.csv
+
+# Exclude the entire .idea folder
+.idea/*1

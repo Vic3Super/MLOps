@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "carbon-relic-439014-t0",
+  "private_key_id": "729c981677ec862426d0003a98cca51bb37d2619",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDPLmeL1PN6/uV1\nkoQb1O8e+TmIqZMOmip0BJ9CH+366AwBJCb3yHPfJW2thfOcejHw01xdHzjGJUrt\nsCZlOOOJE6s1CDNEqhrgfseW+XMTWoFAGMRxaOqCDtm+uiP04Zq1KxGHrzjn6hC3\nTQ+OAmErYaf309SmbUJGF1+sCLKrk5g7ciFUyaEuRcsmRGqzz1lMgjM3t+HE71Lw\nxXQRbezPob63mJUrJlDSt20c+afFIfrGyiVyqDnHg0+LvBto2gI+g805jyi4sEoE\nppz1mGM4UUQ2xIzHve86si15WR/2MDHGnM9xsbkkOMjZyXMUajeI0Nyl2HZ/N+b2\n2XCg31AtAgMBAAECggEAJBKZk0pu4Uevxo6N43Wp87vjhVS3Jtf3U895Ni9uhVzx\nOCKmCUb0y9HNvKSBw8kv2FVIs+sLfM6B8wwUR1QGI/gRe3CT0p0GhHd2g2Yn3+MG\ndZVKYM+qYx44UeHBgHHmeKxIx1XeI90Ib43iizCFYCMG9prCn/6OhzsrHH5AM6i1\nJvu4TL6WwqBj/j6LCUC+JZHphdSZMtj1CwLTWbcl+CIMBfvEkdLNR40Fg4Ax9a6V\nWhclOmc5aSA50YA/eZ7fXGkmlEgWZo6DdZZHn2i9Yt6dWXCg/zLNe4wWHoFYbvgH\nL6bhh7GI/NLIummX5YIHJsp1Vuu1KgmAnieX9M0lcQKBgQDqnvv73c3GY4t/FKIB\nX1fsuvhXtegZRwthzcxQ8j0Q3pSHzO+PWAeGAbm+eydMsG6XnrSFjVMLQ3qz0c8k\nzVXSSa+/DvJWmqFkai51K/8lSLtTV+e1Xea60kfpxj6ci7Or787YltuROfFJTDQZ\npCfl8JiayLfIgcKcPQwni4N+PQKBgQDiD1TdAZWDApwhcHutQDZxg5aWVDcm1nLx\n6ry77mOhiAtX4ljfYVr4xxoBP5ot8cYrljqlebaTfk3VK+wCpwSIXcSJQeylXhs8\nW3Mhgc9K2yFuXXJquyTXr/ycF2ZjzErnhFffp8dW0wODc8xi/OlJmzCe8CJ3iO1X\n+Fn752GosQKBgQC2snBz84ceOjvRDGcO/IiCDiH+YudGb70cPt4gFlGZBknQ6bOO\nArVxE3zpKAs1O5oStQHLkX4eIkC1L+bGuKJgqwKQm3n4GFce01Qz57u588XzI1uK\nLoHR7pcTIk11J5AUjhubKvX1Q5JxSkazxNFQy6Z5uVzrZKf/c8Y4MPqG3QKBgGwQ\nii/wTunG+J4fqG/Ez4HqNrV8YrUFNQOihECOkEAqyclkYbm/T363px3Lqsel2WcC\ntNxf18CgU1LBYVxPPSJ3OLmosxjGaNysltgAtviA0nVw5H5TIiSdc3Om2AKDKZeN\nM3iuOuOtkfNoCt+TKW5Paqm//6oG4fb4uQNrs8qxAoGBAJXGWlZxpt6Yr9q3hzwS\nCOiBEc+mxQ9488/k1thsMXtEAubiSNZTulINTnhwslLHGaqzw6viEzEGmp5A29R4\nFbBIpE9RHn6SYhipPE34lcJ3WXeVVq5diREhvlfQarkMgiojoFjY5yS2nQZawcNe\nX00LeDiO2ARd/6AWqm6Gmlnn\n-----END PRIVATE KEY-----\n",
+  "client_email": "testing@carbon-relic-439014-t0.iam.gserviceaccount.com",
+  "client_id": "111484340815875208725",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/testing%40carbon-relic-439014-t0.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
