@@ -76,6 +76,7 @@ def load_data_test(local=True, size=1000, use_new_data=True):
 
     Returns:
         df: DataFrame from BigQuery.
+        :param local:
         :param use_new_data: If False, only return old training data, excluding new input data from predictions
     """
     if local:
@@ -88,7 +89,7 @@ def load_data_test(local=True, size=1000, use_new_data=True):
     else:
         try:
             # Load config
-            config_path = Path("../configs/config.json")
+            config_path = Path("/app/configs/config.json")
             if not config_path.is_file():
                 raise FileNotFoundError("Configuration file not found.")
 

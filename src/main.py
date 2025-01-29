@@ -10,7 +10,7 @@ from train import train_pipeline, create_pipeline
 
 def main():
     # Load and preprocess data
-    data = load_data_test(local=False)
+    data = load_data_test(local=False, size=1000, use_new_data=True)
     data = extract_data(data)
     data.dropna(inplace=True)
 
