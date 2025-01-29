@@ -17,6 +17,18 @@ if credentials_path and os.path.exists(credentials_path):
 else:
     print("GOOGLE_APPLICATION_CREDENTIALS is not set or the file does not exist!")
 """
+from google.auth import default
+from google.auth.exceptions import DefaultCredentialsError
+
+try:
+    # Get default credentials
+    credentials, project = default()
+    print(f"Using Google Cloud credentials for project: {project}")
+
+except DefaultCredentialsError:
+    print("No Google Cloud credentials found. Ensure the service account has the correct IAM permissions.")
+
+
 # Load the MLflow model when the application starts
 RUN_ID = os.getenv("RUN_ID", "gs://mlflow-bucket-1998/mlruns/2/a741f99410cc4e7d8cf8dc6eb0922ffb")  # Use environment variable for flexibility
 print(f"Loading model at {RUN_ID}/artifacts/model")

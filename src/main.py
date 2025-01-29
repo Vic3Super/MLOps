@@ -4,13 +4,13 @@ from mlflow.models import infer_signature
 
 from deploy import setup_mlflow, log_to_mlflow
 from extract_data import extract_data
-from load_data import load_data
+from load_data import load_data_test,execute_bigquery_query
 from train import train_pipeline, create_pipeline
 
 
 def main():
     # Load and preprocess data
-    data = load_data(local=False)
+    data = load_data_test(local=False)
     data = extract_data(data)
     data.dropna(inplace=True)
 
