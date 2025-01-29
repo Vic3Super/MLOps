@@ -64,7 +64,6 @@ def create_plots(pipeline, X_test, y_test):
     ax.set_title("Predicted vs Actual Values")
     ax.set_xlabel("Actual Values")
     ax.set_ylabel("Predicted Values")
-    # plt.grid(True)
     return fig
 
 

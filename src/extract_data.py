@@ -23,6 +23,6 @@ def extract_data(data):
 
 def extract_data_for_predictions(data):
     # Select only relevant columns
-    df = data[["Trip Seconds", "Trip Miles", "Company"]]
+    df = data[["Trip Seconds", "Trip Miles", "Company", "Trip Total"]]
 
     return df

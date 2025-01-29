@@ -5,10 +5,10 @@
 
 
 # Authenticate with Google Cloud
-gcloud auth activate-service-account --key-file=/app/configs/keys.json
+#gcloud auth activate-service-account --key-file=/app/configs/keys.json
 
 # Export the credentials file path as an environment variable
-export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
+#export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
 
 
 # Run main.py to generate the model and requirements
@@ -32,7 +32,7 @@ export RUN_ID
 
 
 # Print a message to confirm the variable is set
-echo "GOOGLE_APPLICATION_CREDENTIALS is set to $GOOGLE_APPLICATION_CREDENTIALS"
+#echo "GOOGLE_APPLICATION_CREDENTIALS is set to $GOOGLE_APPLICATION_CREDENTIALS"
 
 
 #if [ -z "$MODEL_PATH_ENV" ]; then

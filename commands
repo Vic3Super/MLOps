@@ -1,5 +1,5 @@
-$env:MODEL_PATH="gs://mlflow-bucket-1998/mlruns/2/0d73288a96d84fe5b8f4ca6219bb3df9/artifacts/model"
-$env:GOOGLE_APPLICATION_CREDENTIALS="C:\Users\User\MLFlowGoogle\pythonProject\CloudRun\keys.json"
+$env:MODEL_PATH="gs://mlflow-bucket-1998/mlruns/2/a741f99410cc4e7d8cf8dc6eb0922ffb/artifacts/model"
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\Users\User\PycharmProjects\MLOps\configs\keys.json"
 
 
  docker build -t my-mlflow-app `
