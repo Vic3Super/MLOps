@@ -67,7 +67,7 @@ def create_plots(pipeline, X_test, y_test):
     return fig
 
 
-def log_to_mlflow(pipeline, X_train, X_test, y_test, signature, experiment, input_example, metrics):
+def log_to_mlflow(pipeline, X_train, X_test, y_test, signature, experiment, metrics):
     run_name = datetime.now().strftime("%Y-%m-%d_%H:%M")
     tags = {
         "env": "test",
@@ -85,7 +85,6 @@ def log_to_mlflow(pipeline, X_train, X_test, y_test, signature, experiment, inpu
             artifact_path="model",
             registered_model_name="xgb_pipeline_taxi_regressor",
             signature=signature,
-            input_example=input_example
         ).model_uri
 
         from sklearn.utils import estimator_html_repr

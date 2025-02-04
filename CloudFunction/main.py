@@ -1,6 +1,8 @@
 import json
 import os
 
+import numpy as np
+from feast import FeatureStore, FeatureView
 import pandas as pd
 from google.cloud import bigquery
 from evidently.report import Report
@@ -9,14 +11,19 @@ from datetime import datetime
 from google.cloud import pubsub_v1
 
 def extract_features(data):
-    # Select only relevant columns
-    df = data[["Trip Seconds", "Trip Miles", "Company"]]
-    df = df.dropna()
-    return df
-
+    store = FeatureStore(repo_path=".")
+    feature_service = store.get_feature_service("taxi_drive")
+    # Iterate over the feature view projections and extract all features.
+    used_features = [
+        feature.name
+        for projection in feature_service.feature_view_projections
+        for feature in projection.features
+    ]
+    used_features.remove("trip_total")
+    return data[used_features]
 
 def extract_target(data):
-    df = data[["Trip Total"]].rename(columns={"Trip Total": "target"})
+    df = data[["trip_total"]].rename(columns={"trip_total": "target"})
     df = df.dropna()
     return df
 
@@ -24,18 +31,41 @@ def initialize_bigquery_client():
     """Initialize and return the BigQuery client."""
     return bigquery.Client()
 
+def get_training_data(client, project_id, dataset_name):
+    table_id = f"{project_id}.{dataset_name}.training_data"
+    query = f"SELECT * FROM {table_id}"
+    query_job = client.query(query)
+    # Convert to DataFrame
+    df = query_job.result().to_dataframe()
 
-def get_bigquery_data(client, project_id, dataset_name, table_name):
-    """Fetch data from a BigQuery table and return it as a pandas DataFrame."""
+    # Convert all object-type columns to string
+    df = df.astype({col: "string" for col in df.select_dtypes(include=["object"]).columns})  # Convert object to string
+    df = df.astype({col: "float64" for col in df.select_dtypes(include=["int64"]).columns})  # Convert int to float
 
-    table_ref = client.dataset(dataset_name).table(table_name)
-    table = client.get_table(table_ref)
-    #columns = [field.name for field in table.schema if field.name not in ["prediction", "timestamp"]]
-    #query = f"SELECT {', '.join([f'`{column}`' for column in columns])} FROM `{project_id}.{dataset_name}.{table_name}`"
-    query = f"SELECT * FROM `{project_id}.{dataset_name}.{table_name}`"
-    query_job = client.query(query)  # API request
-    return query_job.result().to_dataframe()
+    return df
 
+
+def get_new_data(client, project_id, dataset_name):
+    table_id = f"{project_id}.{dataset_name}.trip_prediction"
+
+    query = """
+    SELECT *
+    FROM chicago_taxi.trip_prediction AS p
+    LEFT JOIN chicago_taxi.data AS d
+    ON p.unique_key = d.unique_key
+    LEFT JOIN chicago_taxi.driver_aggregates as a
+    ON d.taxi_id = a.taxi_id
+    WHERE p.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR);
+    """
+    query_job = client.query(query)
+    # Convert to DataFrame
+    df = query_job.result().to_dataframe()
+
+    # Convert all object-type columns to string
+    df = df.astype({col: "string" for col in df.select_dtypes(include=["object"]).columns})
+    df = df.astype({col: "float64" for col in df.select_dtypes(include=["int64"]).columns})  # Convert int to float
+
+    return df
 
 
 def preprocess_data(reference_df, current_df, extract_function):
@@ -56,7 +86,7 @@ def run_target_drift_analysis(reference_df, current_df):
 
 def run_performance_analysis(current_df):
     # Actual and predicted values
-    y_actual = current_df["Trip Total"].astype(float)
+    y_actual = current_df["ground_truth"].astype(float)
     y_pred = current_df["prediction"].astype(float)
 
     # Mean Absolute Error (MAE)
@@ -89,22 +119,22 @@ def process_event():
     # Load configuration
     PROJECT_ID = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
     DATASET_NAME = os.getenv("DATASET_NAME", "chicago_taxi")
-    PUBSUB_TOPIC = os.getenv("PUBSUB_TOPIC", "monitoring_job")
+    PUBSUB_TOPIC = os.getenv("PUBSUB_TOPIC", "testing")
     TABLE_ID = os.getenv("TABLE_ID", "monitoring_job")
     # Initialize the BigQuery client
     client = initialize_bigquery_client()
 
-    # Fetch reference and current data
-    result_cur = get_bigquery_data(client, PROJECT_ID, DATASET_NAME, "prediction")
-    result_ref = get_bigquery_data(client, PROJECT_ID, DATASET_NAME, "raw_data")
+    training_data = get_training_data(client, PROJECT_ID, DATASET_NAME)
+    new_data = get_new_data(client, PROJECT_ID, DATASET_NAME)
 
-    features_cur = extract_features(result_cur)
-    features_ref = extract_features(result_ref)
+    features_training_data = extract_features(training_data)
+    features_new_data = extract_features(new_data)
 
-    target_cur = extract_target(result_cur)
-    target_ref = extract_target(result_ref)
+    target_training_data = extract_target(training_data)
+    target_new_data = extract_target(new_data)
 
-    mae, r2, rmse = run_performance_analysis(result_cur)
+
+    mae, r2, rmse = run_performance_analysis(new_data)
 
     performance_metrics = {
         "mae": mae,
@@ -113,8 +143,8 @@ def process_event():
     }
 
     # Run data drift analysis
-    report_dict_data = run_data_drift_analysis(features_ref, features_cur)
-    report_dict_target = run_target_drift_analysis(target_ref, target_cur)
+    report_dict_data = run_data_drift_analysis(features_training_data, features_new_data)
+    report_dict_target = run_target_drift_analysis(target_training_data, target_new_data)
 
     publish(performance_metrics, report_dict_data, report_dict_target, PUBSUB_TOPIC, PROJECT_ID, DATASET_NAME, TABLE_ID)
 
@@ -126,14 +156,31 @@ def publish(performance_metrics, report_dict_data, report_dict_target, topic_nam
     # if bad metrics, send pub/sub message to trigger new build
     # else, store data simply in bigquery
 
-    # Example message aligned with BigQuery schema
+    def convert_numpy_types(obj):
+        """Recursively convert NumPy types to standard Python types."""
+        if isinstance(obj, dict):
+            return {k: convert_numpy_types(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_numpy_types(v) for v in obj]
+        elif isinstance(obj, np.integer):  # Convert np.int64, np.int32
+            return int(obj)
+        elif isinstance(obj, np.floating):  # Convert np.float64, np.float32
+            return float(obj)
+        else:
+            return obj  # Return original value if not a NumPy type
+
+    # Convert NumPy types before JSON serialization
+    report_dict_data = convert_numpy_types(report_dict_data)
+    report_dict_target = convert_numpy_types(report_dict_target)
+
+    # Construct message data with fixed JSON serialization
     message_data = {
         "timestamp": datetime.utcnow().isoformat(),  # Current timestamp in ISO 8601 format
         "data_drift_report": json.dumps(report_dict_data),
         "target_drift_report": json.dumps(report_dict_target),
-        "MAE": performance_metrics["mae"],
-        "R2": performance_metrics["r2"],
-        "RMSE": performance_metrics["rmse"],
+        "MAE": float(performance_metrics["mae"]),  # Ensure float conversion
+        "R2": float(performance_metrics["r2"]),
+        "RMSE": float(performance_metrics["rmse"]),
     }
 
     retrain = False
@@ -172,10 +219,3 @@ def publish(performance_metrics, report_dict_data, report_dict_target, topic_nam
 
     # Insert rows into BigQuery
     errors = client.insert_rows_json(table_ref, rows_to_insert)
-
-"""
-if __name__ == '__main__':
-    from functions_framework import create_app
-    app = create_app('cloud_function_entry_point')
-    app.run(port=8080)
-"""

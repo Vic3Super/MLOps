@@ -22,8 +22,8 @@ def train_pipeline(pipeline, data):
         X_train, y_train, X_test, y_test: Train and test splits for further use.
     """
     # Split data
-    X = data[["Trip Seconds", "Trip Miles", "Company"]]
-    y = data["Trip Total"]
+    X = data[["trip_seconds", "trip_miles", "company", "payment_type", "avg_tips"]]
+    y = data["trip_total"]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.25, random_state=42
@@ -59,8 +59,9 @@ def create_pipeline():
         pipeline: The sklearn Pipeline object.
     """
     # Define numerical and categorical columns
-    numerical_cols = ["Trip Seconds", "Trip Miles"]
-    categorical_cols = ["Company"]
+
+    numerical_cols = ["trip_seconds", "trip_miles", "avg_tips"]
+    categorical_cols = ["company", "payment_type"]
 
     # Preprocessing pipeline
     preprocess = ColumnTransformer(

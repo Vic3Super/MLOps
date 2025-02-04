@@ -15,7 +15,7 @@ steps:
       - 'push'
       - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
 
-  # Step 3: Deploy the new revision to Google Cloud Run (without traffic change)
+  # Step 3: Deploy to Google Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy to Cloud Run'
     args:
@@ -31,28 +31,6 @@ steps:
       - '--allow-unauthenticated'
       - '--memory'
       - '1Gi'
-      - '--no-traffic'  # Deploy the new revision without assigning traffic
-
-  # Step 4: Retrieve the previous active revision
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Get Current Revision'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        export OLD_REV=$(gcloud run services describe my-mlflow-app --region=us-west1 --format='value(status.traffic[0].revisionName)')
-        echo "Previous revision: $OLD_REV"
-        echo $OLD_REV > /workspace/old_revision.txt
-
-  # Step 5: Split traffic between old and new revisions
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Split Traffic'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        OLD_REV=$(cat /workspace/old_revision.txt)
-        gcloud run services update-traffic my-mlflow-app --region=us-west1 --platform=managed --to-latest=10 --to-revisions=$OLD_REV=90
 
 # Optional: Specify the region for Google Cloud Build logs
 options:
