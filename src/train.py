@@ -9,15 +9,9 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from xgboost import XGBRegressor
 import numpy as np
-from helper import create_plots, log_config
 
 def create_pipeline():
-    """
-    Create a preprocessing and modeling pipeline.
 
-    Returns:
-        pipeline: The sklearn Pipeline object.
-    """
     # Define numerical and categorical columns
     numerical_cols = ["trip_seconds", "trip_miles", "avg_tips"]
     categorical_cols = ["company", "payment_type"]

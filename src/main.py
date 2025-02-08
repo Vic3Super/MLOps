@@ -1,8 +1,6 @@
 # Main function
 import pandas as pd
 from mlflow.models import infer_signature
-from plotly.data import experiment
-
 from extract_data import extract_data
 from load_data import load_data_from_feature_store
 from train import  create_pipeline, train_pipeline
