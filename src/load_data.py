@@ -8,16 +8,16 @@ from feast import FeatureView, FeatureStore, RepoConfig
 
 
 def load_data_from_feature_store(size = 1000):
-
+    """
     repo_config = RepoConfig(
-        registry=RegistryConfig(path="gs://feast_registry/registry.db"),
-        project="feast_demo_aws",
-        provider="gcp",
-        offline_store=BigQueryOfflineStoreConfig(type="bigquery", dataset="chicago_taxi"),
-
+    registry=RegistryConfig(path="gs://feast_registry/registry.db"),
+    project="ruling_buzzard",
+    provider="gcp",
+    offline_store=BigQueryOfflineStoreConfig(type="bigquery", dataset="chicago_taxi"),
     )
+    """
 
-    store = FeatureStore(config=repo_config)
+    store = FeatureStore(repo_path="/app/src/")
     feature_service = store.get_feature_service("taxi_drive")
 
     data_table = store.get_data_source("trip_source").get_table_query_string()

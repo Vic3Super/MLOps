@@ -22,7 +22,10 @@ def main():
     print("Experiment created.")
 
     # Train pipeline
-    pipeline, metrics, best_params, X_train, y_train, X_test, y_test, run_id = train_pipeline(pipeline, data, experiment)
+
+
+
+    pipeline, metrics, X_train, y_train, X_test, y_test, run_id = train_pipeline(pipeline, data, experiment)
     print("Pipeline trained")
 
     example_input = X_test.iloc[:5]  # Select a small sample (e.g., first 5 rows)
