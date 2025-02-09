@@ -34,16 +34,9 @@ jobs:
           gcloud auth activate-service-account --key-file=${HOME}/gcp-key.json
           gcloud auth list  # Verify authentication
 
-      # Debug if credentials are set correctly
-      - name: Verify credentials
-        run: |
-          echo "GOOGLE_APPLICATION_CREDENTIALS is set to: $GOOGLE_APPLICATION_CREDENTIALS"
-          ls -l $HOME/gcp-key.json  # Check if the file exists
-          cat $HOME/gcp-key.json | jq  # Print JSON (if jq is installed)
-
-      # Run tests
+      # Run tests with expanded env variable
       - name: Run tests
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcp-key.json  # Ensure it's available in the test environment
+          GOOGLE_APPLICATION_CREDENTIALS: ${HOME}/gcp-key.json  # Ensure it's expanded
         run: |
-           python -m pytest tests/
+          python -m pytest tests/
