@@ -29,12 +29,14 @@ jobs:
       # Authenticate with Google Cloud
       - name: Set up Google Cloud authentication
         run: |
-          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > gcp-key.json
-          gcloud auth activate-service-account --key-file=gcp-key.json
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > $HOME/gcp-key.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json" >> $GITHUB_ENV
+          gcloud auth activate-service-account --key-file=$HOME/gcp-key.json
           gcloud auth list  # Verify authentication
-          export GOOGLE_APPLICATION_CREDENTIALS=gcp-key.json
 
       # Run tests
       - name: Run tests
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcp-key.json  # Ensure it's available in the test environment
         run: |
            python -m pytest tests/  # Adjust this if you use a custom command to run tests
