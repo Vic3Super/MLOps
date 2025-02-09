@@ -3,10 +3,10 @@ name: Run Tests
 on:
   push:
     branches:
-      - main  # Trigger only for pushes to the 'main' branch
+      - master  # Trigger only for pushes to the 'main' branch
   pull_request:
     branches:
-      - main  # Optionally, also run tests for PRs targeting the main branch
+      - master  # Optionally, also run tests for PRs targeting the main branch
 
 jobs:
   test:
