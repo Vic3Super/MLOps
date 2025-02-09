@@ -32,4 +32,4 @@ jobs:
       # Run tests
       - name: Run tests
         run: |
-          pytest  # Adjust this if you use a custom command to run tests
+           python -m pytest tests/  # Adjust this if you use a custom command to run tests
