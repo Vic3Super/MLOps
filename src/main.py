@@ -10,7 +10,7 @@ from validate import validate_serving, validate_model
 
 def main():
     # Load and preprocess data
-    data = load_data_from_feature_store(size=100000)
+    data = load_data_from_feature_store(size=100)
     print("Data loaded.")
     data = extract_data(data)
     print("Data extracted.")

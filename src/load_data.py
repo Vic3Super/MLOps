@@ -13,11 +13,11 @@ def load_data_from_feature_store(size = 1000):
         registry=RegistryConfig(path="gs://feast_registry/registry.db"),
         project="feast_demo_aws",
         provider="gcp",
-        offline_store=BigQueryOfflineStoreConfig(),
+        offline_store=BigQueryOfflineStoreConfig(type="bigquery", dataset="chicago_taxi"),
 
     )
 
-    store = FeatureStore(repo_path="/app/src")
+    store = FeatureStore(config=repo_config)
     feature_service = store.get_feature_service("taxi_drive")
 
     data_table = store.get_data_source("trip_source").get_table_query_string()

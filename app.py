@@ -8,15 +8,15 @@ from google.cloud import bigquery
 from datetime import datetime
 
 
-"""
+
 # Check if GOOGLE_APPLICATION_CREDENTIALS is set
 credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if credentials_path and os.path.exists(credentials_path):
     print(f"Using Google Cloud credentials from: {credentials_path}")
 else:
     print("GOOGLE_APPLICATION_CREDENTIALS is not set or the file does not exist!")
-"""
-from google.auth import default
+
+"""from google.auth import default
 from google.auth.exceptions import DefaultCredentialsError
 
 try:
@@ -26,7 +26,7 @@ try:
 
 except DefaultCredentialsError:
     print("No Google Cloud credentials found. Ensure the service account has the correct IAM permissions.")
-
+"""
 
 # Load the MLflow model when the application starts
 RUN_ID = os.getenv("RUN_ID", "gs://mlflow-bucket-1998/mlruns/2/80162f97da5d4f5fa928bf1f386e1dd4")  # Use environment variable for flexibility

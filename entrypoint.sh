@@ -5,10 +5,10 @@
 
 
 # Authenticate with Google Cloud
-#gcloud auth activate-service-account --key-file=/app/configs/keys.json
+gcloud auth activate-service-account --key-file=/app/configs/keys.json
 
 # Export the credentials file path as an environment variable
-#export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
+export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
 
 
 # Run main.py to generate the model and requirements

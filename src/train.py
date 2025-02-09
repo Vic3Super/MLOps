@@ -49,7 +49,57 @@ def create_pipeline():
     return pipeline
 
 
-def train_pipeline(pipeline, data, experiment, cv=5 ):
+def train_pipeline(pipeline, data, experiment, cv=5):
+    # Split data into features and target
+    X = data[["trip_seconds", "trip_miles", "company", "payment_type", "avg_tips"]]
+    y = data["trip_total"]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.25, random_state=42
+    )
+
+    # Define parameter grid for hyperparameter search.
+    # Note: Parameters for the XGBRegressor are referenced as "model__<param_name>".
+    param_grid = {
+        "model__n_estimators": [100, 300, 500],
+        "model__max_depth": [3, 6, 9],
+        "model__learning_rate": [0.01, 0.1, 0.2]
+    }
+
+    run_name = datetime.now().strftime("%Y-%m-%d_%H:%M")
+    tags = {
+        "env": "Production",
+        "model_type": "XGB Regressor",
+        "experiment_description": "Taxi Regressor"
+    }
+
+    # Start an MLflow run (without grid search)
+    with mlflow.start_run(run_name=run_name, experiment_id=experiment.experiment_id, tags=tags) as parent_run:
+        # Commenting out GridSearchCV
+        # mlflow.log_param("param_grid", param_grid)
+
+        # Train the pipeline directly on the training data (no hyperparameter tuning)
+        pipeline.fit(X_train, y_train)
+
+        # Evaluate the trained pipeline on the test set
+        y_pred = pipeline.predict(X_test)
+
+        metrics = {
+            "MAE": mean_absolute_error(y_test, y_pred),
+            "MSE": mean_squared_error(y_test, y_pred),
+            "RMSE": np.sqrt(mean_squared_error(y_test, y_pred)),
+            "R2": r2_score(y_test, y_pred)
+        }
+
+        # Log metrics to MLflow
+        mlflow.log_metrics(metrics)
+
+    run_id = parent_run.info.run_id
+
+    # Return the trained pipeline and evaluation metrics
+    return pipeline, metrics, X_train, y_train, X_test, y_test, run_id
+
+"""def train_pipeline(pipeline, data, experiment, cv=5 ):
 
     # Split data into features and target
     X = data[["trip_seconds", "trip_miles", "company", "payment_type", "avg_tips"]]
@@ -125,3 +175,4 @@ def train_pipeline(pipeline, data, experiment, cv=5 ):
 
     return best_pipeline, metrics, best_params, X_train, y_train, X_test, y_test, run_id
 
+"""
