@@ -1,9 +1,18 @@
+import os
 import time
-
 import pytest
 from unittest.mock import patch, MagicMock
 from src.load_data import load_data_from_feature_store
 import pandas as pd
+
+
+# Force authentication in tests
+GCP_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+if not GCP_CREDENTIALS or not os.path.exists(GCP_CREDENTIALS):
+    raise RuntimeError(f"Missing Google Cloud credentials: {GCP_CREDENTIALS}")
+
+
 
 @patch("src.load_data.FeatureStore")
 def test_load_data_from_feature_store_success(mock_feature_store):
