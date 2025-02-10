@@ -16,7 +16,7 @@ steps:
       - "-c"
       - |
         echo "Running tests..."
-        pytest tests || exit 1  # Stop build if tests fail
+        python -m pytest tests/ || exit 1  # Stop build if tests fail
 
   # Step 3: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
