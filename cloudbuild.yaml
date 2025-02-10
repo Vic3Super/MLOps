@@ -1,5 +1,24 @@
 steps:
-  # Step 1: Build the Docker image
+  # 1. Set up Python and install dependencies
+  - name: "python:3.12"
+    id: "install-dependencies"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        python -m pip install --upgrade pip
+        pip install -r requirements-local.txt
+  # 2. Run tests
+  - name: "python:3.12"
+    id: "run-tests"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        echo "Running tests..."
+        pytest tests || exit 1  # Stop build if tests fail
+
+  # Step 3: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build Docker Image'
     args:
@@ -8,14 +27,14 @@ steps:
       - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
       - '.'
 
-  # Step 2: Push the Docker image to Google Container Registry (GCR)
+  # Step 4: Push the Docker image to Google Container Registry (GCR)
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Push Docker Image to GCR'
     args:
       - 'push'
       - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
 
-  # Step 3: Deploy to Google Cloud Run
+  # Step 5: Deploy to Google Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy to Cloud Run'
     args:
@@ -35,3 +54,4 @@ steps:
 # Optional: Specify the region for Google Cloud Build logs
 options:
   logging: CLOUD_LOGGING_ONLY
+timeout: 1200s
