@@ -1,5 +1,5 @@
 steps:
-  - # Step 1: Run Tests
+   # Step 1: Run Tests
   - name: "python:3.12"
     id: "run-tests"
     entrypoint: "sh"
