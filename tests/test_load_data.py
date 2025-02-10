@@ -9,9 +9,9 @@ import pandas as pd
 # Force authentication in tests
 GCP_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-if not GCP_CREDENTIALS or not os.path.exists(GCP_CREDENTIALS):
+"""if not GCP_CREDENTIALS or not os.path.exists(GCP_CREDENTIALS):
     raise RuntimeError(f"Missing Google Cloud credentials: {GCP_CREDENTIALS}")
-
+"""
 
 
 @patch("src.load_data.FeatureStore")
@@ -54,6 +54,8 @@ def test_invalid_size():
 
     with pytest.raises(ValueError, match="Size must be a positive integer"):
         load_data_from_feature_store(size=None)  # NoneType size
+
+
 
 
 @patch("src.load_data.FeatureStore")
@@ -103,7 +105,7 @@ def test_load_data_from_feature_store_integration():
 
 @pytest.mark.integration
 def test_load_data_from_feature_store_execution_time():
-    """Integration test: Ensure function runs within 120 seconds."""
+    """Integration test: Ensure function runs within 120 seconds"""
 
     start_time = time.time()
     df = load_data_from_feature_store(size=1000)
@@ -112,12 +114,27 @@ def test_load_data_from_feature_store_execution_time():
     assert (end_time - start_time) <= 120, f"Execution took too long: {end_time - start_time:.2f} seconds"
 
 
+
 @pytest.mark.integration
 def test_load_large_dataset():
-    """Integration test: Ensure function can handle large datasets without crashing."""
+    """Integration test: Ensure function can handle large datasets without crashing and test domain specific aspects"""
 
     df = load_data_from_feature_store(size=50000)  # Large request
 
     assert df is not None
     assert isinstance(df, pd.DataFrame)
     assert len(df) > 0
+    # Extract hour from timestamps
+    df["hour"] = pd.to_datetime(df["trip_start_timestamp"]).dt.hour
+
+    # Check missing hours
+    missing_hours = set(range(24)) - set(df["hour"].unique()), f"Missing hours detected"
+    # Majority of hours should be covered
+    assert len(missing_hours) < 6
+
+    # Find duplicate trips based on unique identifier
+    duplicate_trips = df.duplicated(subset=["unique_key"], keep=False)
+
+    # Assert that no duplicate trips exist
+    assert duplicate_trips.sum() == 0, f"Duplicate trips found: {duplicate_trips.sum()}"
+

@@ -3,6 +3,7 @@ import pandas as pd
 from mlflow.models import infer_signature
 from extract_data import extract_data
 from load_data import load_data_from_feature_store
+from extract_data import upload_training_data_to_bigquery
 from train import  create_pipeline, train_pipeline
 from helper import log_to_mlflow, setup_mlflow
 from validate import validate_serving, validate_model
@@ -13,7 +14,10 @@ def main():
     data = load_data_from_feature_store(size=100000)
     print("Data loaded.")
     data = extract_data(data)
+    print(f"data columns: {data.columns}")
+    print(f"data head: {data.head()}")
     print("Data extracted.")
+    upload_training_data_to_bigquery(data)
     # Create pipeline
     pipeline = create_pipeline()
     print("Pipeline created")

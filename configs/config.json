@@ -1,8 +1,8 @@
 {
-    "GCS_REQUIREMENTS_PATH": "gs://mlflow-bucket-1998/mlruns/2/703ca43b5f724ba8ac574e78195e571e/artifacts/model/requirements.txt",
-    "MODEL_PATH": "gs://mlflow-bucket-1998/mlruns/2/703ca43b5f724ba8ac574e78195e571e/artifacts/model",
+    "GCS_REQUIREMENTS_PATH": "gs://mlflow-bucket-1998/mlruns/2/e3585c29bf9f4df2a643079df024237d/artifacts/model/requirements.txt",
+    "MODEL_PATH": "gs://mlflow-bucket-1998/mlruns/2/e3585c29bf9f4df2a643079df024237d/artifacts/model",
     "PROJECT_ID": "carbon-relic-439014-t0",
     "REGION": "us-west1",
     "DATASET_NAME": "chicago_taxi",
-    "RUN_ID": "gs://mlflow-bucket-1998/mlruns/2/703ca43b5f724ba8ac574e78195e571e"
+    "RUN_ID": "gs://mlflow-bucket-1998/mlruns/2/e3585c29bf9f4df2a643079df024237d"
 }

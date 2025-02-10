@@ -13,8 +13,9 @@ import numpy as np
 def create_pipeline():
 
     # Define numerical and categorical columns
-    numerical_cols = ["trip_seconds", "trip_miles", "avg_tips"]
-    categorical_cols = ["company", "payment_type"]
+    categorical_cols = ["payment_type", "company", "day_type"]  # Replace with your actual categorical columns
+    numerical_cols = ["trip_seconds", "trip_miles", "tolls", "extras", "daytime", "month", "day_of_week",
+                      "day_of_month", "avg_tips"]
 
     # Preprocessing pipeline
     preprocess = ColumnTransformer(
@@ -33,12 +34,14 @@ def create_pipeline():
 
     # Define the model with initial/default parameters (to be tuned)
     model = XGBRegressor(
-        n_estimators=1000,  # Default; will be tuned
-        learning_rate=0.1,  # Default; will be tuned
-        max_depth=6,  # Default; will be tuned
+        n_estimators=1000,
+        learning_rate=0.1,
+        max_depth=6,
         random_state=42,
         objective="reg:squarederror"
     )
+
+
 
     # Create a pipeline that chains preprocessing and modeling
     pipeline = Pipeline(steps=[
@@ -49,22 +52,14 @@ def create_pipeline():
     return pipeline
 
 
-def train_pipeline(pipeline, data, experiment, cv=5):
+def train_pipeline(pipeline, data, experiment):
     # Split data into features and target
-    X = data[["trip_seconds", "trip_miles", "company", "payment_type", "avg_tips"]]
+    X = data[["trip_seconds","trip_miles", "payment_type", "trip_total","company", "extras",  "tolls",  "avg_tips",  "daytime", "day_type",  "month",  "day_of_week",  "day_of_month"]]
     y = data["trip_total"]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.25, random_state=42
     )
-
-    # Define parameter grid for hyperparameter search.
-    # Note: Parameters for the XGBRegressor are referenced as "model__<param_name>".
-    param_grid = {
-        "model__n_estimators": [100, 300, 500],
-        "model__max_depth": [3, 6, 9],
-        "model__learning_rate": [0.01, 0.1, 0.2]
-    }
 
     run_name = datetime.now().strftime("%Y-%m-%d_%H:%M")
     tags = {
@@ -92,7 +87,10 @@ def train_pipeline(pipeline, data, experiment, cv=5):
         }
 
         # Log metrics to MLflow
-        mlflow.log_metrics(metrics)
+        #mlflow.log_metrics(metrics)
+
+        params = pipeline.named_steps["model"].get_params()
+        mlflow.log_params(params)
 
     run_id = parent_run.info.run_id
 

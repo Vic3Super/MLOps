@@ -4,14 +4,6 @@ from feast import FeatureView, FeatureStore, RepoConfig
 
 
 def load_data_from_feature_store(size = 1000):
-    """
-    repo_config = RepoConfig(
-    registry=RegistryConfig(path="gs://feast_registry/registry.db"),
-    project="ruling_buzzard",
-    provider="gcp",
-    offline_store=BigQueryOfflineStoreConfig(type="bigquery", dataset="chicago_taxi"),
-    )
-    """
 
     if not isinstance(size, int) or size < 1:
         raise ValueError("Size must be a positive integer greater than or equal to 1")
@@ -58,3 +50,7 @@ def load_data_from_feature_store(size = 1000):
 
     return training_df
 
+if __name__ == "__main__":
+    training_df = load_data_from_feature_store()
+    print(training_df.columns)
+    print(training_df.iloc[0])
