@@ -1,6 +1,7 @@
 # Define MLflow setup
 import json
 import os
+from datetime import datetime
 
 import mlflow
 import numpy as np
@@ -49,6 +50,7 @@ def feature_importance(pipeline):
     }).sort_values(by="Importance", ascending=False)
 
     return importance_df
+
 
 def create_plots(pipeline, X_test, y_test):
     # -------------------------------
@@ -120,9 +122,17 @@ def log_config(experiment_id, run_id):
     update_json_file(new_config)
 
 
-def log_to_mlflow(pipeline, X_test, Y_test, signature, experiment, metrics, run_id):
+def log_to_mlflow(pipeline, X_test, Y_test, signature, experiment, metrics, params):
+
+    run_name = datetime.now().strftime("%Y-%m-%d_%H:%M")
+    tags = {
+        "env": "Production",
+        "model_type": "XGB Regressor",
+        "experiment_description": "Taxi Regressor"
+    }
+
     with mlflow.start_run(
-            run_id=run_id,
+            run_name=run_name, experiment_id=experiment.experiment_id, tags=tags
     ) as run:
         logged_model_uri = mlflow.sklearn.log_model(
             sk_model=pipeline,
@@ -146,10 +156,11 @@ def log_to_mlflow(pipeline, X_test, Y_test, signature, experiment, metrics, run_
             mlflow.log_figure(fig, f'plots/{i}.png')
 
         mlflow.log_metrics(metrics)
+        mlflow.log_params(params)
 
         run_id = run.info.run_id
         log_config(experiment_id=experiment.experiment_id, run_id=run_id)
 
     print("Pipeline logged successfully!")
 
-    return logged_model_uri
+    return logged_model_uri, run_id

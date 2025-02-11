@@ -32,6 +32,8 @@ def extract_data(data):
     # Drop empty rows
     df.dropna(inplace=True)
 
+    df['trip_start_timestamp'] = df['trip_start_timestamp'].dt.tz_localize(None).astype('datetime64[ns]')
+    """
     # Extract features from trip_start_timestamp
     df["daytime"] = df["trip_start_timestamp"].dt.hour
     df['day_type'] = df['trip_start_timestamp'].dt.weekday.apply(lambda x: 'weekend' if x >= 5 else 'weekday')
@@ -39,7 +41,7 @@ def extract_data(data):
     df['day_of_week'] = df['trip_start_timestamp'].dt.dayofweek
     df['day_of_month'] = df['trip_start_timestamp'].dt.day
     df.drop(columns=["trip_start_timestamp"], inplace=True)
-
+    """
     if df.empty:
         raise ValueError("DataFrame is empty after cleaning. No valid data to process.")
 

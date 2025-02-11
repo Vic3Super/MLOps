@@ -1,13 +1,12 @@
 import numpy as np
 from flask import Flask, request, jsonify
-import mlflow.pyfunc
+import mlflow
 import pandas as pd
 import os
 import logging
 from google.cloud import bigquery
 from datetime import datetime
-
-
+import src.train
 
 # Check if GOOGLE_APPLICATION_CREDENTIALS is set
 credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -29,10 +28,12 @@ except DefaultCredentialsError:
 """
 
 # Load the MLflow model when the application starts
-RUN_ID = os.getenv("RUN_ID", "gs://mlflow-bucket-1998/mlruns/2/80162f97da5d4f5fa928bf1f386e1dd4")  # Use environment variable for flexibility
+RUN_ID = os.getenv("RUN_ID", "gs://mlflow-bucket-1998/mlruns/2/689304264e6b48f1b47e1724af7fb4f3")  # Use environment variable for flexibility
 print(f"Loading model at {RUN_ID}/artifacts/model")
 model = mlflow.pyfunc.load_model(f"{RUN_ID}/artifacts/model")
+
 print(f"Loaded model at {RUN_ID}/artifacts/model")
+
 
 # Initialize Flask app
 app = Flask(__name__)

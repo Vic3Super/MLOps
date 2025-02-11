@@ -14,11 +14,11 @@ def main():
     data = load_data_from_feature_store(size=100000)
     print("Data loaded.")
     data = extract_data(data)
-    print(f"data columns: {data.columns}")
-    print(f"data head: {data.head()}")
     print("Data extracted.")
-    upload_training_data_to_bigquery(data)
-    # Create pipeline
+    print(data.iloc[0])
+
+    #upload_training_data_to_bigquery(data)
+
     pipeline = create_pipeline()
     print("Pipeline created")
 
@@ -29,7 +29,7 @@ def main():
 
 
 
-    pipeline, metrics, X_train, y_train, X_test, y_test, run_id = train_pipeline(pipeline, data, experiment)
+    pipeline, metrics, X_train, y_train, X_test, y_test, params = train_pipeline(pipeline, data)
     print("Pipeline trained")
 
     example_input = X_test.iloc[:5]  # Select a small sample (e.g., first 5 rows)
@@ -38,9 +38,12 @@ def main():
     signature = infer_signature(example_input, pipeline.predict(example_input))
 
 
-    model_uri = log_to_mlflow(pipeline, X_test, y_test, signature, experiment, metrics, run_id)
+    model_uri, run_id = log_to_mlflow(pipeline, X_test, y_test, signature, experiment, metrics, params)
     print("Logged to MLFlow.")
 
+    print(signature)
+
+    print(example_input.dtypes)
 
     validated_serving = validate_serving(example_input, model_uri)
     print(f"Validated serving with {validated_serving}")
