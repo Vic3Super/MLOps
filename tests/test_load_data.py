@@ -7,7 +7,7 @@ import pandas as pd
 
 
 # Force authentication in tests
-GCP_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+#GCP_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 """if not GCP_CREDENTIALS or not os.path.exists(GCP_CREDENTIALS):
     raise RuntimeError(f"Missing Google Cloud credentials: {GCP_CREDENTIALS}")

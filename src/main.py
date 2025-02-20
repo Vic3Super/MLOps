@@ -1,58 +1,119 @@
-# Main function
+import os
+import sys
+import logging
+import traceback
 import pandas as pd
 from mlflow.models import infer_signature
 from extract_data import extract_data
 from load_data import load_data_from_feature_store
 from extract_data import upload_training_data_to_bigquery
-from train import  create_pipeline, train_pipeline
-from helper import log_to_mlflow, setup_mlflow
+from train import create_pipeline, train_pipeline
+from helper import log_to_mlflow, setup_mlflow, log_config
 from validate import validate_serving, validate_model
 
+# Setup Logging
+LOG_FILE = "logs/app.log"
+os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,  # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Timestamp and level
+    handlers=[
+        logging.FileHandler(LOG_FILE),  # Save logs to file
+        logging.StreamHandler(sys.stdout)  # Print logs to console
+    ]
+)
+
+logger = logging.getLogger(__name__)  # Global logger
 
 def main():
-    # Load and preprocess data
-    data = load_data_from_feature_store(size=100000)
-    print("Data loaded.")
-    data = extract_data(data)
-    print("Data extracted.")
-    print(data.iloc[0])
-
-    #upload_training_data_to_bigquery(data)
-
-    pipeline = create_pipeline()
-    print("Pipeline created")
-
-    experiment = setup_mlflow()
-    print("Experiment created.")
-
-    # Train pipeline
-
-
-
-    pipeline, metrics, X_train, y_train, X_test, y_test, params = train_pipeline(pipeline, data)
-    print("Pipeline trained")
-
-    example_input = X_test.iloc[:5]  # Select a small sample (e.g., first 5 rows)
-
-
-    signature = infer_signature(example_input, pipeline.predict(example_input))
-
-
-    model_uri, run_id = log_to_mlflow(pipeline, X_test, y_test, signature, experiment, metrics, params)
-    print("Logged to MLFlow.")
-
-    print(signature)
-
-    print(example_input.dtypes)
-
-    validated_serving = validate_serving(example_input, model_uri)
-    print(f"Validated serving with {validated_serving}")
     try:
-        validate_model(model_uri, X_test, y_test, run_id, experiment)
-    except Exception as e:
-        print(e)
+        logger.info("Starting main pipeline execution...")
 
-    print("Model validated")
+        # Load and preprocess data
+        TRAINING_SIZE = int(os.getenv("TRAINING_SIZE", 100000))
+        try:
+            data = load_data_from_feature_store(TRAINING_SIZE)
+            logger.info("Data loaded successfully.")
+        except Exception as e:
+            logger.error(f"Error loading data from feature store: {e}")
+            sys.exit(1)
+
+        try:
+            data = extract_data(data)
+            logger.info("Data extraction completed.")
+        except Exception as e:
+            logger.error(f"Error extracting data: {e}")
+            sys.exit(1)
+
+        TEST_RUN = os.getenv("TEST_RUN", "True").lower() == "true"
+        if not TEST_RUN:
+            try:
+                upload_training_data_to_bigquery(data)
+                logger.info("Training data uploaded to BigQuery.")
+            except Exception as e:
+                logger.error(f"Error uploading training data to BigQuery: {e}")
+                sys.exit(1)
+
+        try:
+            pipeline = create_pipeline()
+            logger.info("Pipeline created successfully.")
+        except Exception as e:
+            logger.error(f"Error creating pipeline: {e}")
+            sys.exit(1)
+
+        try:
+            experiment = setup_mlflow()
+            logger.info(f"MLflow experiment with id {experiment.experiment_id} used.")
+        except Exception as e:
+            logger.error(f"Error setting up MLflow experiment: {e}")
+            sys.exit(1)
+
+        # Train pipeline
+        try:
+            pipeline, metrics, X_train, y_train, X_test, y_test, params = train_pipeline(pipeline, data)
+            logger.info("Pipeline training completed.")
+        except Exception as e:
+            logger.error(f"Error training pipeline: {e}")
+            sys.exit(1)
+
+        try:
+            example_input = X_test.iloc[:5]
+            signature = infer_signature(example_input, pipeline.predict(example_input))
+        except Exception as e:
+            logger.error(f"Error inferring model signature: {e}")
+            sys.exit(1)
+
+        try:
+            model_uri, run_id = log_to_mlflow(pipeline, X_test, y_test, signature, experiment, metrics, params)
+            logger.info(f"Model logged to MLflow: {model_uri}")
+        except Exception as e:
+            logger.error(f"Error logging to MLflow: {e}")
+            sys.exit(1)
+
+        try:
+            log_config(experiment_id=experiment.experiment_id, run_id=run_id)
+            logger.info("Configuration logged successfully.")
+        except Exception as e:
+            logger.warning(f"Failed to log config: {e}")  # Non-critical
+
+        try:
+            validated_serving = validate_serving(example_input, model_uri)
+            logger.info(f"Validated serving: {validated_serving}")
+        except Exception as e:
+            logger.warning(f"Model serving validation failed: {e}")  # Non-critical
+
+        try:
+            validate_model(model_uri, X_test, y_test, run_id, experiment)
+            logger.info("Model validation completed.")
+        except Exception as e:
+            logger.warning(f"Model validation failed: {e}")  # Non-critical
+
+        logger.info("Pipeline execution completed successfully.")
+
+    except Exception as e:
+        logger.critical("Unexpected error occurred!", exc_info=True)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

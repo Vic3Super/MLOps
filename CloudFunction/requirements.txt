@@ -1,9 +1,7 @@
 google-cloud-bigquery
 google-cloud-bigquery-storage
-google-cloud-storage
 google-cloud-pubsub
 db-dtypes
 pandas
 numpy
-feast
 evidently==0.5.1

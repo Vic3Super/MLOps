@@ -43,17 +43,41 @@ print(f"App initialized.")
 # Initialize BigQuery client
 bq_client = bigquery.Client()
 project_id = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
-dataset_name = os.getenv("BQ_DATASET_NAME", "chicago_taxi")
-table_name_prediction = os.getenv("BQ_TABLE_NAME_PREDICTIONS", "trip_prediction")
-table_name_data = os.getenv("BQ_TABLE_NAME_DATA", "data")
-table_name_drivers = os.getenv("BQ_TABLE_NAME_DRIVERS", "driver_aggregates")
+dataset_name = os.getenv("DATASET_NAME", "chicago_taxi")
+table_name_prediction = os.getenv("TABLE_NAME_PREDICTIONS", "trip_prediction")
+table_name_data = os.getenv("TABLE_NAME_DATA", "data")
+table_name_drivers = os.getenv("TABLE_NAME_DRIVERS", "driver_aggregates")
 
 table_id_prediction = f"{project_id}.{dataset_name}.{table_name_prediction}"
 table_id_data = f"{project_id}.{dataset_name}.{table_name_data}"
 table_id_drivers = f"{project_id}.{dataset_name}.{table_name_drivers}"
 
+TEST_RUN = os.getenv("TEST_RUN", "True").lower() == "true"
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
+
+
+
+def extract_time_features(df):
+
+    print(df.columns)
+    print(df.dtypes)
+    df["trip_start_timestamp"] = pd.to_datetime(df["trip_start_timestamp"])
+    print(df.columns)
+    print(df.dtypes)
+
+    # Extract features from trip_start_timestamp
+    df["daytime"] = df["trip_start_timestamp"].dt.hour
+    df['day_type'] = df['trip_start_timestamp'].dt.weekday.apply(lambda x: 'weekend' if x >= 5 else 'weekday')
+    df['month'] = df['trip_start_timestamp'].dt.month
+    df['day_of_week'] = df['trip_start_timestamp'].dt.dayofweek
+    df['day_of_month'] = df['trip_start_timestamp'].dt.day
+    df.drop(columns=["trip_start_timestamp"], inplace=True)
+
+    return df
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -64,6 +88,8 @@ def predict():
         # Convert input to Pandas DataFrame
         data = pd.DataFrame(input_data['data'], columns=input_data['columns'])
         logging.info("Input Data loaded")
+
+        data = extract_time_features(data)
 
         taxi_ids = data['taxi_id'].unique().tolist()
 
@@ -116,19 +142,17 @@ def predict():
         logging.info(f"Prepared {len(rows_to_insert_data)} rows for data table")
         logging.info(f"Prepared {len(rows_to_insert_prediction)} rows for prediction table")
 
+        if not TEST_RUN:
+            # Insert into BigQuery
+            errors_data = bq_client.insert_rows_json(table_id_data, rows_to_insert_data)
+            if errors_data:
+                logging.error(f"BigQuery Data Table Insertion Errors: {errors_data}")
+                return jsonify({"error": "Failed to store data in BigQuery"}), 500
 
-
-        # Insert into BigQuery
-
-        errors_data = bq_client.insert_rows_json(table_id_data, rows_to_insert_data)
-        if errors_data:
-            logging.error(f"BigQuery Data Table Insertion Errors: {errors_data}")
-            return jsonify({"error": "Failed to store data in BigQuery"}), 500
-
-        errors_prediction = bq_client.insert_rows_json(table_id_prediction, rows_to_insert_prediction)
-        if errors_prediction:
-            logging.error(f"BigQuery Prediction Table Insertion Errors: {errors_prediction}")
-            return jsonify({"error": "Failed to store predictions in BigQuery"}), 500
+            errors_prediction = bq_client.insert_rows_json(table_id_prediction, rows_to_insert_prediction)
+            if errors_prediction:
+                logging.error(f"BigQuery Prediction Table Insertion Errors: {errors_prediction}")
+                return jsonify({"error": "Failed to store predictions in BigQuery"}), 500
 
         return jsonify({"predictions": predictions.tolist()})
 

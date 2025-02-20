@@ -28,7 +28,7 @@ def test_extract_data_success():
     cleaned_df = extract_data(raw_data)
 
     assert cleaned_df is not None
-    #assert len(cleaned_df.columns) > len(raw_data.columns)
+    assert len(cleaned_df.columns) > len(raw_data.columns)
     assert cleaned_df.isna().sum().sum() == 0
     assert "unique_key" not in cleaned_df.columns  # Dropped column
     assert "taxi_id" not in cleaned_df.columns  # Dropped column
@@ -116,8 +116,8 @@ def test_extract_data_outliers():
 
 
 ### ✅ Test: DataFrame is Still Valid After Processing ###
-"""def test_extract_data_output_columns():
-    Test extract_data() output has expected columns.
+def test_extract_data_output_columns():
+    #Test extract_data() output has expected columns.
     raw_data = pd.DataFrame({
         "unique_key": [1, 2, 3],
         "taxi_id": [101, 102, 103],
@@ -143,7 +143,7 @@ def test_extract_data_outliers():
        'daytime', 'day_type', 'month', 'day_of_week', 'day_of_month'}
     assert set(cleaned_df.columns) == expected_columns
 
-"""
+
 ### ✅ Test: Successful Upload ###
 @patch("src.extract_data.bigquery.Client")  # Mock BigQuery client
 def test_upload_training_data_to_bigquery_success(mock_bigquery_client):
@@ -168,7 +168,7 @@ def test_upload_training_data_to_bigquery_empty_df():
     """Test upload_training_data_to_bigquery raises ValueError if given empty DataFrame."""
     empty_df = pd.DataFrame()
 
-    with pytest.raises(ValueError, match="Cannot upload empty DataFrame to BigQuery"):
+    with pytest.raises(ValueError, match="Cannot upload an empty DataFrame to BigQuery."):
         upload_training_data_to_bigquery(empty_df)
 
 

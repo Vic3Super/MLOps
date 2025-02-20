@@ -2,8 +2,6 @@
 
 # Set the environment variable for app.py
 
-
-
 # Authenticate with Google Cloud
 gcloud auth activate-service-account --key-file=/app/configs/keys.json
 
@@ -12,12 +10,23 @@ export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
 
 export FEATURE_STORE_PATH=/app/src/
 
+
+DATASET_NAME=$(jq -r '.DATASET_NAME' /app/configs/config.json)
+export DATASET_NAME
+PROJECT_ID=$(jq -r '.PROJECT_ID' /app/configs/config.json)
+export PROJECT_ID
+TEST_RUN=$(jq -r '.TEST_RUN' /app/configs/config.json)
+export TEST_RUN
+TRAINING_SIZE=$(jq -r '.TRAINING_SIZE' /app/configs/config.json)
+export TRAINING_SIZE
+
 # Run main.py to generate the model and requirements
 python /app/src/main.py
 
 RUN_ID=$(jq -r '.RUN_ID' /app/configs/config.json)
 
 export RUN_ID
+
 
 # Parse GCS_REQUIREMENTS_PATH from config.json
 #GCS_REQUIREMENTS_PATH=$(jq -r '.RUN_ID' /app/configs/config.json)/requirements.txt
@@ -46,6 +55,8 @@ export RUN_ID
 
 # Fetch the dynamically generated requirements.txt from Google Cloud Storage
 gsutil cp "$RUN_ID/artifacts/model/requirements.txt" /app/requirements.txt
+
+gsutil cp /app/logs/app.log "$RUN_ID/artifacts/artifacts/app.log"
 
 # Install dependencies from the dynamically generated requirements
 pip install --no-cache-dir -r /app/requirements.txt
