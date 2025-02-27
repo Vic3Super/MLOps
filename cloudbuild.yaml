@@ -42,7 +42,7 @@ steps:
       - 'us-west1'
       - '--allow-unauthenticated'
       - '--memory'
-      - '1Gi'
+      - '2Gi'
 
 # Optional: Specify the region for Google Cloud Build logs
 options:

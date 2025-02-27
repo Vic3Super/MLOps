@@ -31,7 +31,7 @@ def main():
         logger.info("Starting main pipeline execution...")
 
         # Load and preprocess data
-        TRAINING_SIZE = int(os.getenv("TRAINING_SIZE", 100000))
+        TRAINING_SIZE = int(os.getenv("TRAINING_SIZE", 1000000))
         try:
             data = load_data_from_feature_store(TRAINING_SIZE)
             logger.info("Data loaded successfully.")
@@ -46,7 +46,7 @@ def main():
             logger.error(f"Error extracting data: {e}")
             sys.exit(1)
 
-        TEST_RUN = os.getenv("TEST_RUN", "True").lower() == "true"
+        TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
         if not TEST_RUN:
             try:
                 upload_training_data_to_bigquery(data)

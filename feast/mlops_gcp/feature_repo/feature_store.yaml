@@ -1,0 +1,7 @@
+project: mlops_gcp
+registry: gs://feast_registry/registry.db
+provider: gcp
+offline_store:
+  type: bigquery
+  dataset: chicago_taxi
+entity_key_serialization_version: 2

@@ -31,9 +31,10 @@ def extract_data(data: pd.DataFrame) -> pd.DataFrame:
         raise TypeError("Input data must be a pandas DataFrame.")
 
     required_columns = {
-        'unique_key', 'taxi_id', 'event_timestamp', 'trip_seconds',
+        'unique_key', 'taxi_id', 'event_timestamp',
         'trip_miles', 'payment_type', 'trip_total', 'company',
-        'trip_start_timestamp', 'extras', 'tolls', 'avg_tips'
+        'trip_start_timestamp', 'extras', 'tolls', 'avg_tips',
+        "pickup_latitude", "pickup_longitude", "pickup_community_area"
     }
 
     missing_columns = required_columns - set(data.columns)
@@ -47,16 +48,18 @@ def extract_data(data: pd.DataFrame) -> pd.DataFrame:
 
     size_before_removing_zero_entries = len(df)
     # Remove zero or negative values
-    df = df[(df["trip_seconds"] > 0) & (df["trip_miles"] > 0) & (df["trip_total"] > 0)]
+    df = df[(df["trip_miles"] > 0) & (df["trip_total"] > 0)]
     removed = size_before_removing_zero_entries - len(df)
-    logger.info(f"Removed {removed} zero entries from columns trip_seconds, trip_miles, trip_total .")
+    logger.info(f"Removed {removed} zero entries from columns trip_miles, trip_total .")
 
     # Drop empty rows
 
+    '''
     size_before_dropna = len(df)
     df.dropna(inplace=True)
     removed = size_before_dropna - len(df)
     logger.info(f"Removed {removed} entries for containing NaN values.")
+    '''
     if df.empty:
         logger.error("DataFrame is empty after initial cleaning. No valid data to process.")
         raise ValueError("DataFrame is empty after cleaning. No valid data to process.")
@@ -100,8 +103,8 @@ def remove_outliers(df: pd.DataFrame) -> pd.DataFrame:
         - Uses a standard 1.5*IQR rule for filtering outliers.
     """
     logger.info("Starting outlier removal process.")
-
-    numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    exclude_cols = {"extras", "avg_tips", "pickup_latitude", "tolls", "pickup_longitude", "pickup_community_area"}  # Set of columns to exclude
+    numeric_cols = [col for col in df.select_dtypes(include=["number"]).columns if col not in exclude_cols]
     for col in numeric_cols:
         Q1 = df[col].quantile(0.25)
         Q3 = df[col].quantile(0.75)

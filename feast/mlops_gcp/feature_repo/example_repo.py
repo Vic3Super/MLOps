@@ -19,14 +19,17 @@ trip_features = FeatureView(
     name="trip_features",
     entities=[trip_entity],
     schema=[
-        Field(name="trip_seconds", dtype=Float32),
+        #Field(name="trip_seconds", dtype=Float32),
         Field(name="trip_miles", dtype=Float32),
         Field(name="payment_type", dtype=String),
         Field(name="trip_total", dtype=Float32),
         Field(name="company", dtype=String),
         Field(name="trip_start_timestamp", dtype=UnixTimestamp),
         Field(name="extras", dtype=Float32),
-        Field(name="tolls", dtype=Float32)
+        Field(name="tolls", dtype=Float32),
+        Field(name="pickup_latitude", dtype=Float32),
+        Field(name="pickup_longitude", dtype=Float32),
+        Field(name="pickup_community_area", dtype=Float32),
     ],
     source=trip_source,
 )

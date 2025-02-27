@@ -23,7 +23,8 @@ def create_pipeline() -> Pipeline:
 
     # Define numerical and categorical columns
     categorical_cols = ["payment_type", "company", "day_type"]
-    numerical_cols = ["trip_seconds", "trip_miles", "tolls", "extras", "avg_tips", "daytime", "day_of_week", "day_of_month", "month"]
+    numerical_cols = ["trip_miles", "tolls", "extras", "daytime", "month", "day_of_week", "day_of_month",
+                      "avg_tips", "pickup_latitude", "pickup_longitude", "pickup_community_area"]
 
     # Define the column transformer for preprocessing
     column_transformer = ColumnTransformer(
@@ -97,10 +98,12 @@ def train_pipeline(pipeline: Pipeline, data: pd.DataFrame):
         logger.error("Input data is empty.")
         raise ValueError("Input data is empty.")
 
+
     # Define required columns
     required_columns = {
-        "trip_total", "trip_seconds", "trip_miles", "tolls", "extras", "avg_tips",
-        "daytime", "day_of_week", "day_of_month", "month", "payment_type", "company", "day_type"
+        "trip_total", "trip_miles", "tolls", "extras", "avg_tips",
+        "daytime", "day_of_week", "day_of_month", "month", "payment_type",
+        "company", "day_type", "pickup_latitude", "pickup_longitude", "pickup_community_area"
     }
     missing_columns = required_columns - set(data.columns)
     if missing_columns:
@@ -108,8 +111,10 @@ def train_pipeline(pipeline: Pipeline, data: pd.DataFrame):
         raise ValueError(f"Missing required columns: {missing_columns}")
 
     logger.info("Splitting data into features (X) and target (y).")
-    X = data[["trip_seconds", "trip_miles", "tolls", "extras", "avg_tips", "daytime",
-              "day_of_week", "day_of_month", "month", "payment_type", "company", "day_type"]]
+    X = data[[
+        "trip_miles", "tolls", "extras", "avg_tips",
+        "daytime", "day_of_week", "day_of_month", "month", "payment_type",
+        "company", "day_type", "pickup_latitude", "pickup_longitude", "pickup_community_area"]]
     y = data["trip_total"]
 
     # Split data into training and test sets

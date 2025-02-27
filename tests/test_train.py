@@ -28,7 +28,6 @@ def sample_data() -> pd.DataFrame:
 def test_train_pipeline_valid_input():
     # Sample valid data
     data = pd.DataFrame({
-        "trip_seconds": np.random.randint(60, 3600, size=100),
         "trip_miles": np.random.uniform(0.5, 30, size=100),
         "payment_type": np.random.choice(["Credit Card", "Cash"], size=100),
         "trip_total": np.random.uniform(5, 100, size=100),
@@ -41,6 +40,9 @@ def test_train_pipeline_valid_input():
         "month": np.random.randint(1, 13, size=100),
         "day_of_week": np.random.randint(0, 7, size=100),
         "day_of_month": np.random.randint(1, 31, size=100),
+        "pickup_community_area": np.random.uniform(0, 10, size=100),
+        "pickup_latitude": np.random.uniform(0, 100, size=100),
+        "pickup_longitude": np.random.uniform(-100, 10, size=100),
     })
 
     pipeline = create_pipeline()
@@ -99,9 +101,10 @@ def test_train_pipeline_missing_columns():
 
 
 def test_train_pipeline_with_full_pipeline(sample_data):
-    numerical_cols = ["trip_seconds", "trip_miles", "tolls", "extras", "daytime", "month", "day_of_week",
-                      "day_of_month", "avg_tips"]
+    # Define numerical and categorical columns
     categorical_cols = ["payment_type", "company", "day_type"]
+    numerical_cols = ["trip_miles", "tolls", "extras", "daytime", "month", "day_of_week", "day_of_month",
+                      "avg_tips", "pickup_latitude", "pickup_longitude", "pickup_community_area"]
 
     preprocess = ColumnTransformer(
         transformers=[
@@ -165,5 +168,5 @@ def test_train_pipeline_with_full_pipeline(sample_data):
 
     # Assert that predictions remain stable
     correlation = np.corrcoef(predictions, predictions_perturbed)[0, 1]
-    assert correlation > 0.95, f"Prediction correlation too low: {correlation}"
+    assert correlation > 0.99, f"Prediction correlation too low: {correlation}"
 

@@ -46,13 +46,13 @@ def setup_mlflow() -> mlflow.entities.Experiment:
 
 def feature_importance(pipeline: Pipeline) -> pd.DataFrame:
     """
-    Extracts feature importances from a trained pipeline.
+    Extracts feature importances from a trained pipeline and groups one-hot encoded categorical features.
 
     Args:
         pipeline (Pipeline): The trained pipeline containing a model.
 
     Returns:
-        pd.DataFrame: A DataFrame containing feature importance scores.
+        pd.DataFrame: A DataFrame containing grouped feature importance scores with columns 'Feature' and 'Importance'.
 
     Raises:
         ValueError: If the pipeline is None.
@@ -98,7 +98,6 @@ def feature_importance(pipeline: Pipeline) -> pd.DataFrame:
             except Exception as e:
                 logger.warning(f"Failed to extract feature names from preprocessing: {e}")
 
-    # Ensure feature_names and importances match
     num_features = len(importances)
     if feature_names is not None and len(feature_names) != num_features:
         logger.warning("Feature names and importances do not match in length. Using indices instead.")
@@ -108,11 +107,25 @@ def feature_importance(pipeline: Pipeline) -> pd.DataFrame:
     importance_df = pd.DataFrame({
         'Feature': feature_names if feature_names is not None else range(num_features),
         'Importance': importances
-    }).sort_values(by="Importance", ascending=False)
+    })
+
+    # Define a helper to extract the base feature name for one-hot encoded features.
+    def get_base_feature(feat):
+        # Assume one-hot encoded features have a structure like "cat__feature_value"
+        if isinstance(feat, str) and feat.startswith("cat__"):
+            return feat.rsplit("_", 1)[0]
+        return feat
+
+    # Create a new column with the grouped feature names
+    importance_df['Base_Feature'] = importance_df['Feature'].apply(get_base_feature)
+    grouped_df = importance_df.groupby('Base_Feature', as_index=False)['Importance'].sum()
+
+    # Rename the grouping column back to "Feature" for compatibility with downstream code.
+    grouped_df = grouped_df.rename(columns={'Base_Feature': 'Feature'})
+    grouped_df = grouped_df.sort_values(by="Importance", ascending=False)
 
     logger.info("Feature importance extraction completed.")
-    return importance_df
-
+    return grouped_df
 
 def create_plots(pipeline: Pipeline, X_test, y_test) -> list:
     """
