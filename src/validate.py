@@ -5,7 +5,6 @@ import mlflow
 from mlflow.models import validate_serving_input, make_metric
 from mlflow.models import convert_input_example_to_serving_input
 from mlflow.models import MetricThreshold
-from mlflow.models.evaluation.validation import ModelValidationFailedException
 
 # Get the global logger (inherits from main.py)
 logger = logging.getLogger(__name__)

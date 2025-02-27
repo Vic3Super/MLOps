@@ -31,7 +31,7 @@ def main():
         logger.info("Starting main pipeline execution...")
 
         # Load and preprocess data
-        TRAINING_SIZE = int(os.getenv("TRAINING_SIZE", 1000000))
+        TRAINING_SIZE = int(os.getenv("TRAINING_SIZE", 3000000))
         try:
             data = load_data_from_feature_store(TRAINING_SIZE)
             logger.info("Data loaded successfully.")
