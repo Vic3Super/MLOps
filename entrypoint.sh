@@ -12,10 +12,9 @@ export TEST_RUN
 TRAINING_SIZE=$(jq -r '.TRAINING_SIZE' /app/configs/config.json)
 export TRAINING_SIZE
 
-export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
+#export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
 
 # Set default project (Replace with your project ID)
-gcloud config set project "$PROJECT_ID"
 
 python /app/src/main.py
 

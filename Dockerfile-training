@@ -13,23 +13,6 @@ WORKDIR /app
 # Copy application files
 COPY . /app
 
-
-
-# Install Google Cloud SDK dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg \
-    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-    && echo "deb http://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
-    && apt-get update && apt-get install -y google-cloud-sdk
-
-# Set environment variable to prevent prompts during gcloud initialization
-ENV CLOUDSDK_CORE_DISABLE_PROMPTS=1
-
-
-
-
-
 # Include service account for local testing
 #COPY configs/keys.json /app/keys.json
 
