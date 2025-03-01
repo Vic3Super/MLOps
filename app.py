@@ -124,19 +124,22 @@ def predict():
         rows_to_insert_data = []
         rows_to_insert_prediction = []
 
+
+        revision = os.getenv("K_REVISION", "unknown-revision")  # Get Cloud Run revision name
+
         for row, pred in zip(data.to_dict(orient="records"), predictions):
             # Add timestamp to row data
             row["timestamp"] = timestamp_now
 
             # Append to data insertion list
             rows_to_insert_data.append(row)
-
             # Append to prediction insertion list
             rows_to_insert_prediction.append({
                 "unique_key": row.get("unique_key"),
                 "prediction": float(pred),
                 "ground_truth": row.get("trip_total"),
                 "timestamp": timestamp_now,
+                "version":revision
             })
 
         logging.info(f"Prepared {len(rows_to_insert_data)} rows for data table")
