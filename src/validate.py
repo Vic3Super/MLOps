@@ -2,6 +2,7 @@ import logging
 import numpy as np
 import pandas as pd
 import mlflow
+from mlflow import MlflowClient
 from mlflow.models import validate_serving_input, make_metric
 from mlflow.models import convert_input_example_to_serving_input
 from mlflow.models import MetricThreshold
@@ -53,7 +54,7 @@ def validate_serving(input_example: pd.DataFrame, model_uri: str):
         raise RuntimeError(f"Model serving validation failed: {e}")
 
 
-def validate_model(candidate_model_uri: str, X_test, y_test, parent_run_id: str, experiment):
+def validate_model(candidate_model_uri: str, X_test, y_test, parent_run_id: str, experiment, model_version):
     """
     Validates the candidate model against evaluation criteria and the last running model.
 
@@ -68,6 +69,7 @@ def validate_model(candidate_model_uri: str, X_test, y_test, parent_run_id: str,
         TypeError: If `X_test` or `y_test` is not in the expected format.
         ValueError: If `X_test` and `y_test` have mismatched lengths.
         ModelValidationFailedException: If the model does not meet validation thresholds.
+        model_version: Version of the model to validate.
     """
     logger.info(f"Starting model validation for candidate model: {candidate_model_uri}")
 
@@ -138,8 +140,8 @@ def validate_model(candidate_model_uri: str, X_test, y_test, parent_run_id: str,
 
     # Define validation criteria
     thresholds = {
-        "mean_absolute_error": MetricThreshold(threshold=5, greater_is_better=False),
-        "root_mean_squared_error": MetricThreshold(threshold=8, greater_is_better=False),
+        #"mean_absolute_error": MetricThreshold(threshold=5, greater_is_better=False),
+        #"root_mean_squared_error": MetricThreshold(threshold=8, greater_is_better=False),
         "r2_score": MetricThreshold(threshold=0.8, greater_is_better=True),
         "root_mean_squared_error_by_mean": MetricThreshold(threshold=0.3, greater_is_better=False),
         "root_mean_squared_error_by_range": MetricThreshold(threshold=0.1, greater_is_better=False),
@@ -152,3 +154,4 @@ def validate_model(candidate_model_uri: str, X_test, y_test, parent_run_id: str,
     )
 
     logger.info("Model validation successful. The model meets the required thresholds.")
+

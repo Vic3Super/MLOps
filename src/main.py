@@ -3,7 +3,9 @@ import sys
 import logging
 import traceback
 import pandas as pd
+from mlflow import MlflowClient
 from mlflow.models import infer_signature
+
 from extract_data import extract_data
 from load_data import load_data_from_feature_store
 from extract_data import upload_training_data_to_bigquery
@@ -31,7 +33,7 @@ def main():
         logger.info("Starting main pipeline execution...")
 
         # Load and preprocess data
-        TRAINING_SIZE = int(os.getenv("TRAINING_SIZE", 3000000))
+        TRAINING_SIZE = int(os.getenv("TRAINING_SIZE", 100000))
         try:
             data = load_data_from_feature_store(TRAINING_SIZE)
             logger.info("Data loaded successfully.")
@@ -46,7 +48,7 @@ def main():
             logger.error(f"Error extracting data: {e}")
             sys.exit(1)
 
-        TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
+        TEST_RUN = os.getenv("TEST_RUN", "True").lower()
         if not TEST_RUN:
             try:
                 upload_training_data_to_bigquery(data)
@@ -85,7 +87,7 @@ def main():
             sys.exit(1)
 
         try:
-            model_uri, run_id = log_to_mlflow(pipeline, X_test, y_test, signature, experiment, metrics, params)
+            model_uri, run_id, model_version = log_to_mlflow(pipeline, X_test, y_test, signature, experiment, metrics, params)
             logger.info(f"Model logged to MLflow: {model_uri}")
         except Exception as e:
             logger.error(f"Error logging to MLflow: {e}")
@@ -104,8 +106,15 @@ def main():
             logger.warning(f"Model serving validation failed: {e}")  # Non-critical
 
         try:
-            validate_model(model_uri, X_test, y_test, run_id, experiment)
+            validate_model(model_uri, X_test, y_test, run_id, experiment, model_version)
             logger.info("Model validation completed.")
+
+            client = MlflowClient()
+            # Set registered model tag
+            client.set_registered_model_tag("xgb_pipeline_taxi_regressor", "task", "regressor")
+            # Set model version tag
+            client.set_model_version_tag("xgb_pipeline_taxi_regressor", model_version, "validation_status", "approved")
+
         except Exception as e:
             logger.warning(f"Model validation failed: {e}")  # Non-critical
 

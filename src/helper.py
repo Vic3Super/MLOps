@@ -6,7 +6,7 @@ import mlflow
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from mlflow import MlflowException
+from mlflow import MlflowException, MlflowClient
 from sklearn.pipeline import Pipeline
 from sklearn.utils import estimator_html_repr
 
@@ -337,7 +337,7 @@ def log_to_mlflow(
 
     run_name = datetime.now().strftime("%Y-%m-%d_%H:%M")
     tags = {
-        "env": "Production",
+        "env": "Staging",
         "model_type": "XGB Regressor",
         "experiment_description": "Taxi Regressor"
     }
@@ -357,6 +357,11 @@ def log_to_mlflow(
                     signature=signature,
                 ).model_uri
                 logger.info("Model successfully logged to MLflow.")
+
+                client = MlflowClient()
+                model_version = client.get_latest_versions("xgb_pipeline_taxi_regressor")[0].version
+                logger.info(f"Model version: {model_version}")
+
             except MlflowException as e:
                 logger.critical(f"Failed to log model to MLflow: {e}", exc_info=True)
                 raise RuntimeError(f"Failed to log model to MLflow: {e}")
@@ -438,4 +443,4 @@ def log_to_mlflow(
         logger.critical(f"MLflow error encountered: {e}", exc_info=True)
         raise RuntimeError(f"MLflow error: {e}")
 
-    return logged_model_uri, run_id
+    return logged_model_uri, run_id, model_version

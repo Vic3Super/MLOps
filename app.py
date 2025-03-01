@@ -1,3 +1,4 @@
+import subprocess
 import numpy as np
 from flask import Flask, request, jsonify
 import mlflow
@@ -7,14 +8,27 @@ import logging
 from google.cloud import bigquery
 from datetime import datetime
 
+from mlflow import MlflowClient
 
+'''
 # Load the MLflow model when the application starts
 RUN_ID = os.getenv("RUN_ID", "gs://mlflow-bucket-1998/mlruns/2/689304264e6b48f1b47e1724af7fb4f3")  # Use environment variable for flexibility
 print(f"Loading model at {RUN_ID}/artifacts/model")
 model = mlflow.pyfunc.load_model(f"{RUN_ID}/artifacts/model")
+'''
+TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
+mlflow.set_tracking_uri(TRACKING_URI)
+mlflow.autolog(disable=True)
 
-print(f"Loaded model at {RUN_ID}/artifacts/model")
+client = MlflowClient()
+run_id = client.get_latest_versions("xgb_pipeline_taxi_regressor")[0].run_id
 
+model_path = f"gs://mlflow-bucket-1998/mlruns/2/{run_id}/artifacts/model"
+requirements_path =  mlflow.artifacts.download_artifacts(f"{model_path}/requirements.txt")
+#subprocess.run(["pip", "install", "--no-cache-dir", "-r", requirements_path], check=True)
+#print(f"Loaded model at {RUN_ID}/artifacts/model")
+
+model = mlflow.pyfunc.load_model(model_path)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -114,7 +128,7 @@ def predict():
                 "prediction": float(pred),
                 "ground_truth": row.get("trip_total"),
                 "timestamp": timestamp_now,
-                "run_id":RUN_ID # to check versioning
+                #"run_id":RUN_ID # to check versioning
             })
 
         logging.info(f"Prepared {len(rows_to_insert_data)} rows for data table")
