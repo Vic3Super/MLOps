@@ -42,11 +42,9 @@ logging.basicConfig(level=logging.INFO)
 
 def extract_time_features(df):
 
-    print(df.columns)
-    print(df.dtypes)
+
     df["trip_start_timestamp"] = pd.to_datetime(df["trip_start_timestamp"])
-    print(df.columns)
-    print(df.dtypes)
+
 
     # Extract features from trip_start_timestamp
     df["daytime"] = df["trip_start_timestamp"].dt.hour
@@ -54,7 +52,7 @@ def extract_time_features(df):
     df['month'] = df['trip_start_timestamp'].dt.month
     df['day_of_week'] = df['trip_start_timestamp'].dt.dayofweek
     df['day_of_month'] = df['trip_start_timestamp'].dt.day
-    df.drop(columns=["trip_start_timestamp"], inplace=True)
+    #df.drop(columns=["trip_start_timestamp"], inplace=True)
 
     return df
 
@@ -98,10 +96,11 @@ def predict():
         # Prepare data for BigQuery
         timestamp_now = datetime.utcnow().isoformat()
 
-        data.drop(inplace=True, columns=['avg_tips'])
+        data.drop(inplace=True, columns=['avg_tips', "daytime", "day_of_week", "day_of_month", "month"])
         # Convert data to dictionary format
         rows_to_insert_data = []
         rows_to_insert_prediction = []
+
 
         for row, pred in zip(data.to_dict(orient="records"), predictions):
             # Add timestamp to row data
@@ -120,6 +119,9 @@ def predict():
 
         logging.info(f"Prepared {len(rows_to_insert_data)} rows for data table")
         logging.info(f"Prepared {len(rows_to_insert_prediction)} rows for prediction table")
+
+        print(rows_to_insert_data[0])
+        print(rows_to_insert_prediction[0])
 
         if not TEST_RUN:
             # Insert into BigQuery

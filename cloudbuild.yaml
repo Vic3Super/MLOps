@@ -41,6 +41,8 @@ steps:
     id: 'Build Docker Image'
     args:
       - 'build'
+      - '--build-arg'
+      - 'RUN_TRAINING=true'  # Enables training during build
       - '-t'
       - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
       - '.'

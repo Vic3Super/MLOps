@@ -2,7 +2,7 @@
     "DATASET_NAME": "chicago_taxi",
     "PROJECT_ID": "carbon-relic-439014-t0",
     "REGION": "us-west1",
-    "RUN_ID": "gs://mlflow-bucket-1998/mlruns/2/4ed29203f7fd4b0f9cc0ba81e752a6ca",
+    "RUN_ID": "",
     "TEST_RUN": "False",
     "TRAINING_SIZE": 150000
 }
