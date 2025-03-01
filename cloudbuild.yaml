@@ -1,6 +1,6 @@
 steps:
 
-  # Step 1: Fetch the OLD active revision (before deploying a new version)
+  # Step 6: Fetch the OLD active revision (before deploying a new version)
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Fetch Old Revision'
     entrypoint: 'bash'
@@ -10,22 +10,19 @@ steps:
         gcloud run revisions list \
           --service=my-mlflow-app \
           --region=us-west1 \
-           --filter="status.conditions.type['Active'].status:'True'"  \
-          --format="value(metadata.name)" \
-          --sort-by="~createTime" > /workspace/active_revisions.txt
+          --filter="status.conditions.type['Active'].status:'True'" \
+          --format="value(metadata.name)" > /workspace/active_revisions.txt
 
         echo "Checking active revisions..."
         cat /workspace/active_revisions.txt
 
-        # Count active revisions
         if [ "$(wc -l < /workspace/active_revisions.txt)" -gt 1 ]; then
-          echo "❌ ERROR: More than one active revision found!"
+          echo "ERROR: More than one active revision found!"
           exit 1  # Stop the build process
         fi
 
-        # Store the single active revision for later use
         cat /workspace/active_revisions.txt > /workspace/old_revision.txt
-        echo "✅ Old active revision: $(cat /workspace/old_revision.txt)"
+        echo "Old active revision: $(cat /workspace/old_revision.txt)"
 
    # Step 2: Run Tests
   - name: "python:3.12"
