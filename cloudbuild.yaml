@@ -10,7 +10,7 @@ steps:
         gcloud run revisions list \
           --service=my-mlflow-app \
           --region=us-west1 \
-          --filter="status.conditions.type:Active" \
+           --filter="status.conditions.type['Active'].status:'True'"  \
           --format="value(metadata.name)" \
           --sort-by="~createTime" > /workspace/active_revisions.txt
 
