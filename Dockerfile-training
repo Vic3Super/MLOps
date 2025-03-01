@@ -27,10 +27,7 @@ RUN apt-get update && apt-get install -y \
 ENV CLOUDSDK_CORE_DISABLE_PROMPTS=1
 
 
-ENV PROJECT_ID=/app/configs/config.json
 
-# Set default project (Replace with your project ID)
-RUN gcloud config set project "$PROJECT_ID"
 
 
 # Include service account for local testing

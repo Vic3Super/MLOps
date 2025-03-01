@@ -13,6 +13,9 @@ TRAINING_SIZE=$(jq -r '.TRAINING_SIZE' /app/configs/config.json)
 export TRAINING_SIZE
 
 
+# Set default project (Replace with your project ID)
+gcloud config set project "$PROJECT_ID"
+
 python /app/src/main.py
 
 
