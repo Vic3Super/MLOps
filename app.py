@@ -6,26 +6,7 @@ import os
 import logging
 from google.cloud import bigquery
 from datetime import datetime
-import src.train
 
-# Check if GOOGLE_APPLICATION_CREDENTIALS is set
-credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-if credentials_path and os.path.exists(credentials_path):
-    print(f"Using Google Cloud credentials from: {credentials_path}")
-else:
-    print("GOOGLE_APPLICATION_CREDENTIALS is not set or the file does not exist!")
-
-"""from google.auth import default
-from google.auth.exceptions import DefaultCredentialsError
-
-try:
-    # Get default credentials
-    credentials, project = default()
-    print(f"Using Google Cloud credentials for project: {project}")
-
-except DefaultCredentialsError:
-    print("No Google Cloud credentials found. Ensure the service account has the correct IAM permissions.")
-"""
 
 # Load the MLflow model when the application starts
 RUN_ID = os.getenv("RUN_ID", "gs://mlflow-bucket-1998/mlruns/2/689304264e6b48f1b47e1724af7fb4f3")  # Use environment variable for flexibility
@@ -57,8 +38,6 @@ TEST_RUN = os.getenv("TEST_RUN", "True").lower() == "true"
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-
-
 
 
 def extract_time_features(df):
@@ -124,9 +103,6 @@ def predict():
         rows_to_insert_data = []
         rows_to_insert_prediction = []
 
-
-        revision = os.getenv("K_REVISION", "unknown-revision")  # Get Cloud Run revision name
-
         for row, pred in zip(data.to_dict(orient="records"), predictions):
             # Add timestamp to row data
             row["timestamp"] = timestamp_now
@@ -139,7 +115,7 @@ def predict():
                 "prediction": float(pred),
                 "ground_truth": row.get("trip_total"),
                 "timestamp": timestamp_now,
-                "version":revision
+                "run_id":RUN_ID # to check versioning
             })
 
         logging.info(f"Prepared {len(rows_to_insert_data)} rows for data table")
