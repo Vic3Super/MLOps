@@ -1,5 +1,33 @@
 steps:
-   # Step 1: Run Tests
+
+  # Step 1: Fetch the OLD active revision (before deploying a new version)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Fetch Old Revision'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run revisions list \
+          --service=my-mlflow-app \
+          --region=us-west1 \
+          --filter="status.conditions.type:Active" \
+          --format="value(metadata.name)" \
+          --sort-by="~createTime" > /workspace/active_revisions.txt
+
+        echo "Checking active revisions..."
+        cat /workspace/active_revisions.txt
+
+        # Count active revisions
+        if [ "$(wc -l < /workspace/active_revisions.txt)" -gt 1 ]; then
+          echo "❌ ERROR: More than one active revision found!"
+          exit 1  # Stop the build process
+        fi
+
+        # Store the single active revision for later use
+        cat /workspace/active_revisions.txt > /workspace/old_revision.txt
+        echo "✅ Old active revision: $(cat /workspace/old_revision.txt)"
+
+   # Step 2: Run Tests
   - name: "python:3.12"
     id: "run-tests"
     entrypoint: "sh"
@@ -11,7 +39,7 @@ steps:
         echo "Running tests..."
         python -m pytest tests/ || exit 1  # Stop build if tests fail
 
-  # Step 2: Build the Docker image
+  # Step 3: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build Docker Image'
     args:
@@ -20,14 +48,14 @@ steps:
       - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
       - '.'
 
-  # Step 3: Push the Docker image to Google Container Registry (GCR)
+  # Step 4: Push the Docker image to Google Container Registry (GCR)
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Push Docker Image to GCR'
     args:
       - 'push'
       - 'gcr.io/carbon-relic-439014-t0/my-mlflow-app'
 
-  # Step 4: Deploy to Google Cloud Run
+  # Step 5: Deploy to Google Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy to Cloud Run'
     args:
@@ -45,7 +73,7 @@ steps:
       - '2Gi'
       - '--no-traffic'
 
-  # Step 5: Fetch the NEW revision (latest created revision)
+  # Step 6: Fetch the NEW revision (latest created revision)
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Fetch New Revision'
     entrypoint: 'bash'
@@ -58,21 +86,6 @@ steps:
           --format="value(metadata.name)" \
           --sort-by="~createTime" | head -n1 > /workspace/new_revision.txt
         echo "New revision: $(cat /workspace/new_revision.txt)"
-
-  # Step 6: Fetch the OLD active revision (before deploying a new version)
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Fetch Old Revision'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        gcloud run revisions list \
-          --service=my-mlflow-app \
-          --region=us-west1 \
-          --filter="status.conditions.type:Active" \
-          --format="value(metadata.name)" \
-          --sort-by="~createTime" | head -n1 > /workspace/old_revision.txt
-        echo "Old active revision: $(cat /workspace/old_revision.txt)"
 
 
 # Step 7: Assign 80% traffic to the OLD revision and 20% to the NEW revision
