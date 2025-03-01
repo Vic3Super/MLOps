@@ -2,7 +2,7 @@
 
 export FEATURE_STORE_PATH=/app/src/
 
-export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
+#export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
 
 
 DATASET_NAME=$(jq -r '.DATASET_NAME' /app/configs/config.json)
