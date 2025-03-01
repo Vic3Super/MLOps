@@ -17,8 +17,8 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '--network=cloudbuild'
-      - 'gcr.io/$PROJECT_ID/training-image'
+      - 'gcr.io/$PROJECT_ID/training-image'  # Image name should follow -t
+      - '--network=cloudbuild'  # Network setting placed separately
       - '-f'
       - 'Dockerfile-training'
       - '.'
