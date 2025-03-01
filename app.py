@@ -47,7 +47,7 @@ table_id_prediction = f"{project_id}.{dataset_name}.{table_name_prediction}"
 table_id_data = f"{project_id}.{dataset_name}.{table_name_data}"
 table_id_drivers = f"{project_id}.{dataset_name}.{table_name_drivers}"
 
-TEST_RUN = os.getenv("TEST_RUN", "True").lower() == "true"
+TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
 
 
 # Configure logging
@@ -125,7 +125,7 @@ def predict():
         # Prepare data for BigQuery
         timestamp_now = datetime.utcnow().isoformat()
 
-        data.drop(inplace=True, columns=['avg_tips', "daytime", "day_of_week", "day_of_month", "month"])
+        data.drop(inplace=True, columns=['avg_tips', "daytime", "day_of_week", "day_of_month", "month", "day_type"])
         # Convert data to dictionary format
         rows_to_insert_data = []
         rows_to_insert_prediction = []
@@ -134,6 +134,8 @@ def predict():
         for row, pred in zip(data.to_dict(orient="records"), predictions):
             # Add timestamp to row data
             row["timestamp"] = timestamp_now
+            if isinstance(row.get("trip_start_timestamp"), pd.Timestamp):
+                row["trip_start_timestamp"] = row["trip_start_timestamp"].isoformat()
 
             # Append to data insertion list
             rows_to_insert_data.append(row)
@@ -150,6 +152,7 @@ def predict():
         logging.info(f"Prepared {len(rows_to_insert_prediction)} rows for prediction table")
 
         if not TEST_RUN:
+            logging.info(f"Logging to BigQuery")
             # Insert into BigQuery
             errors_data = bq_client.insert_rows_json(table_id_data, rows_to_insert_data)
             if errors_data:
