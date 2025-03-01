@@ -34,9 +34,9 @@ def test_validate_model_invalid_X_test_type():
     candidate_model_uri = "models:/test-model/1"
     parent_run_id = "1234"
     experiment = MagicMock()
-
+    model_version = 0
     with pytest.raises(TypeError, match="X_test must be a pandas DataFrame or NumPy array."):
-        validate_model(candidate_model_uri, X_test, y_test, parent_run_id, experiment)
+        validate_model(candidate_model_uri, X_test, y_test, parent_run_id, experiment, model_version)
 
 
 def test_validate_model_invalid_y_test_type():
@@ -45,9 +45,9 @@ def test_validate_model_invalid_y_test_type():
     candidate_model_uri = "models:/test-model/1"
     parent_run_id = "1234"
     experiment = MagicMock()
-
+    model_version = 0
     with pytest.raises(TypeError, match="y_test must be a pandas Series, NumPy array, or list."):
-        validate_model(candidate_model_uri, X_test, y_test, parent_run_id, experiment)
+        validate_model(candidate_model_uri, X_test, y_test, parent_run_id, experiment, model_version)
 
 
 def test_validate_model_mismatched_data_lengths():
@@ -56,6 +56,6 @@ def test_validate_model_mismatched_data_lengths():
     candidate_model_uri = "models:/test-model/1"
     parent_run_id = "1234"
     experiment = MagicMock()
-
+    model_version = 0
     with pytest.raises(ValueError, match="X_test and y_test must have the same number of samples."):
-        validate_model(candidate_model_uri, X_test, y_test, parent_run_id, experiment)
+        validate_model(candidate_model_uri, X_test, y_test, parent_run_id, experiment, model_version)

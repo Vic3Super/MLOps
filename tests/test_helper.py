@@ -130,7 +130,7 @@ def test_successful_logging(mock_log_artifact, mock_log_params, mock_log_metrics
     """Test the function runs successfully and logs correct components."""
     mock_start_run.return_value.__enter__.return_value.info.run_id = "run_123"
 
-    logged_model_uri, run_id = log_to_mlflow(**valid_inputs)
+    logged_model_uri, run_id, model_version = log_to_mlflow(**valid_inputs)
 
     assert logged_model_uri is not None
     assert run_id == "run_123"
