@@ -62,13 +62,27 @@ def extract_time_features(df):
 
     # Extract features from trip_start_timestamp
     df["daytime"] = df["trip_start_timestamp"].dt.hour
-    df['day_type'] = df['trip_start_timestamp'].dt.weekday.apply(lambda x: 'weekend' if x >= 5 else 'weekday')
+    df['day_type'] = df['trip_start_timestamp'].dt.weekday.apply(lambda x: 'weekend' if x >= 5 else 'weekday').astype(str)
     df['month'] = df['trip_start_timestamp'].dt.month
     df['day_of_week'] = df['trip_start_timestamp'].dt.dayofweek
     df['day_of_month'] = df['trip_start_timestamp'].dt.day
     #df.drop(columns=["trip_start_timestamp"], inplace=True)
 
     return df
+
+def convert_features(df):
+    # Convert numeric columns, ensuring None/NaN values do not cause errors
+    numeric_cols = [
+        "trip_miles", "tolls", "extras", "avg_tips",
+        "pickup_latitude", "pickup_longitude", "pickup_community_area"
+    ]
+    df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors="coerce")
+
+    # Convert categorical columns
+    df["payment_type"] = df["payment_type"].astype("str")
+
+    return df
+
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -104,6 +118,7 @@ def predict():
 
         data = data.replace(np.nan, None)
 
+        data = convert_features(data)
         #prediction_data = data_extracted.drop(columns=["unique_key", "taxi_id"])
         predictions = model.predict(data)
 
@@ -133,9 +148,6 @@ def predict():
 
         logging.info(f"Prepared {len(rows_to_insert_data)} rows for data table")
         logging.info(f"Prepared {len(rows_to_insert_prediction)} rows for prediction table")
-
-        print(rows_to_insert_data[0])
-        print(rows_to_insert_prediction[0])
 
         if not TEST_RUN:
             # Insert into BigQuery
