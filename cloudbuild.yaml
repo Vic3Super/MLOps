@@ -65,5 +65,18 @@ steps:
       - '--memory'
       - '1Gi'
 
+  # Step 8: Explicitly Allow Unauthenticated Access
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Allow Unauthenticated Access'
+    entrypoint: 'bash'
+    args:
+      - "-c"
+      - |
+        gcloud beta run services add-iam-policy-binding my-mlflow-app \
+          --region=us-west1 \
+          --member=allUsers \
+          --role=roles/run.invoker
+
+
 options:
   logging: CLOUD_LOGGING_ONLY
