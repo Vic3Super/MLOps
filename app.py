@@ -23,7 +23,7 @@ table_id_prediction = f"{project_id}.{dataset_name}.{table_name_prediction}"
 table_id_data = f"{project_id}.{dataset_name}.{table_name_data}"
 table_id_drivers = f"{project_id}.{dataset_name}.{table_name_drivers}"
 
-TEST_RUN = os.getenv("TEST_RUN", "True").lower() == "true"
+TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
 #CHALLENGER = os.getenv("CHALLENGER", "False").lower() == "true"
 MODEL_TYPE = os.getenv("MODEL_TYPE", "champion")
 # Configure logging
@@ -113,7 +113,8 @@ def predict():
 
         data = data.merge(avg_tips_df, on='taxi_id', how='left')
 
-        data = data.replace(np.nan, None)
+        #data = data.replace(np.nan, None)
+        #data = data.where(pd.notna(data), None)
 
         data = convert_features(data)
         #prediction_data = data_extracted.drop(columns=["unique_key", "taxi_id"])
@@ -124,9 +125,14 @@ def predict():
 
         data.drop(inplace=True, columns=['avg_tips', "daytime", "day_of_week", "day_of_month", "month", "day_type"])
         # Convert data to dictionary format
+
         rows_to_insert_data = []
         rows_to_insert_prediction = []
 
+        # Convert string "nan" to actual NaN
+        data.replace("nan", np.nan, inplace=True)
+
+        data = data.replace({np.nan: None})
 
         for row, pred in zip(data.to_dict(orient="records"), predictions):
             # Add timestamp to row data
@@ -142,7 +148,7 @@ def predict():
                 "prediction": float(pred),
                 "ground_truth": row.get("trip_total"),
                 "timestamp": timestamp_now,
-                #"run_id":RUN_ID # to check versioning
+                "model_type":MODEL_TYPE # to check versioning
             })
 
         logging.info(f"Prepared {len(rows_to_insert_data)} rows for data table")
