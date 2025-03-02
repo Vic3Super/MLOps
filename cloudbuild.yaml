@@ -64,6 +64,8 @@ steps:
       - '--allow-unauthenticated'
       - '--memory'
       - '1Gi'
+      - '--set-env-vars'
+      - 'MODEL_TYPE=champion'
 
 options:
   logging: CLOUD_LOGGING_ONLY

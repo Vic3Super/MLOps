@@ -1,4 +1,3 @@
-import subprocess
 import numpy as np
 from flask import Flask, request, jsonify
 import mlflow
@@ -10,29 +9,6 @@ from datetime import datetime
 
 from mlflow import MlflowClient
 
-'''
-# Load the MLflow model when the application starts
-RUN_ID = os.getenv("RUN_ID", "gs://mlflow-bucket-1998/mlruns/2/689304264e6b48f1b47e1724af7fb4f3")  # Use environment variable for flexibility
-print(f"Loading model at {RUN_ID}/artifacts/model")
-model = mlflow.pyfunc.load_model(f"{RUN_ID}/artifacts/model")
-'''
-TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
-mlflow.set_tracking_uri(TRACKING_URI)
-mlflow.autolog(disable=True)
-
-client = MlflowClient()
-run_id = client.get_latest_versions("xgb_pipeline_taxi_regressor")[0].run_id
-
-model_path = f"gs://mlflow-bucket-1998/mlruns/2/{run_id}/artifacts/model"
-requirements_path =  mlflow.artifacts.download_artifacts(f"{model_path}/requirements.txt")
-#subprocess.run(["pip", "install", "--no-cache-dir", "-r", requirements_path], check=True)
-#print(f"Loaded model at {RUN_ID}/artifacts/model")
-
-model = mlflow.pyfunc.load_model(model_path)
-
-# Initialize Flask app
-app = Flask(__name__)
-print(f"App initialized.")
 
 
 # Initialize BigQuery client
@@ -47,11 +23,32 @@ table_id_prediction = f"{project_id}.{dataset_name}.{table_name_prediction}"
 table_id_data = f"{project_id}.{dataset_name}.{table_name_data}"
 table_id_drivers = f"{project_id}.{dataset_name}.{table_name_drivers}"
 
-TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
-
-
+TEST_RUN = os.getenv("TEST_RUN", "True").lower() == "true"
+#CHALLENGER = os.getenv("CHALLENGER", "False").lower() == "true"
+MODEL_TYPE = os.getenv("MODEL_TYPE", "champion")
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
+TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
+mlflow.set_tracking_uri(TRACKING_URI)
+mlflow.autolog(disable=True)
+
+client = MlflowClient()
+#run_id = client.get_latest_versions("xgb_pipeline_taxi_regressor")[0].run_id
+
+
+run_id = client.get_model_version_by_alias("xgb_pipeline_taxi_regressor", MODEL_TYPE).run_id
+
+
+model_path = f"gs://mlflow-bucket-1998/mlruns/2/{run_id}/artifacts/model"
+requirements_path =  mlflow.artifacts.download_artifacts(f"{model_path}/requirements.txt")
+
+model = mlflow.pyfunc.load_model(model_path)
+
+# Initialize Flask app
+app = Flask(__name__)
+print(f"App initialized.")
+
 
 
 def extract_time_features(df):
