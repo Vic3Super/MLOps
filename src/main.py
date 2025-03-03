@@ -56,7 +56,7 @@ def main():
             logger.error(f"Error extracting data: {e}")
             sys.exit(1)
 
-        TEST_RUN = os.getenv("TEST_RUN", "True").lower()
+        TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
         if not TEST_RUN:
             try:
                 upload_training_data_to_bigquery(data)

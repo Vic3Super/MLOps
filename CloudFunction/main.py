@@ -19,7 +19,9 @@ def extract_features(df):
     df['day_of_week'] = df['trip_start_timestamp'].dt.dayofweek.astype("float")
     df['day_of_month'] = df['trip_start_timestamp'].dt.day.astype("float")
     #df.drop(columns=["trip_start_timestamp"], inplace=True)
-    df = df[["daytime", "day_type", "month", "day_of_week", "day_of_month", "trip_seconds", "trip_miles", "tolls", "extras", "avg_tips", "payment_type", "company"]]
+    df = df[["daytime", "day_type", "month", "day_of_week", "day_of_month",
+             "trip_miles", "tolls", "extras", "avg_tips", "payment_type", "company",
+             'pickup_community_area', 'pickup_latitude', 'pickup_longitude']]
     return df
 
 def extract_target(data):
@@ -139,6 +141,8 @@ def process_event():
 
     training_data = get_training_data(client, PROJECT_ID, DATASET_NAME)
     new_data = get_new_data(client, PROJECT_ID, DATASET_NAME)
+
+    new_data = new_data.dropna(subset=["ground_truth"])
 
     features_training_data = training_data.drop(columns="trip_total")
     features_new_data = extract_features(new_data)
