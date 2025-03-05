@@ -29,70 +29,57 @@ steps:
       - 'push'
       - 'gcr.io/$PROJECT_ID/training-image'
 
-  # Step 4: Create a Cloud Run Job (Only Needs to be Done Once)
+  # Step 4: Create or Update Cloud Run Job
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Create Cloud Run Job'
-    entrypoint: 'gcloud'
-    args:
-      - 'run'
-      - 'jobs'
-      - 'create'
-      - 'training-job'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/training-image'
-      - '--region'
-      - 'us-central1'
-      - '--task-timeout'
-      - '1800s'  # 30 minutes max runtime
-      - '--memory'
-      - '2Gi'
-      - '--cpu'
-      - '2'
-      - '--max-retries'
-      - '1'
-
-  # Step 5: Execute the Training Job and Wait for Completion (With Timeout)
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Run Training Job'
+    id: 'Update Cloud Run Job'
     entrypoint: 'sh'
     args:
       - "-c"
       - |
-        echo "Executing Cloud Run Job..."
-        echo "Fetching latest execution ID..."
-        
-        gcloud run jobs execute training-job --region=us-central1
-        
-        echo "Waiting for job execution to complete..."
-        
-        MAX_WAIT_TIME=1800  # 30 minutes timeout (in seconds)
+        if gcloud run jobs describe training-job --region us-central1 > /dev/null 2>&1; then
+          gcloud run jobs update training-job --image gcr.io/$PROJECT_ID/training-image --region us-central1
+        else
+          gcloud run jobs create training-job --image gcr.io/$PROJECT_ID/training-image --region us-central1 --task-timeout 1800s --memory 2Gi --cpu 2 --max-retries 1
+        fi
+
+  # Step 5: Execute Training Job and Wait for Completion with Timeout
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Run Training Job and Wait'
+    entrypoint: 'bash'
+    args:
+      - "-c"
+      - |
+        echo "Starting Cloud Run training job..."
+        EXECUTION_ID=$(gcloud run jobs execute training-job --region us-central1 --format='value(metadata.name)')
+        echo "Started training-job with execution ID: $EXECUTION_ID"
+
         START_TIME=$(date +%s)
+        TIMEOUT=1800  # 30 minutes
 
         while true; do
-          JOB_STATUS=$(gcloud run jobs executions list --region=us-central1 --format='value(status.state)' --limit=1)
-          echo "Current status: $JOB_STATUS"
+          STATUS=$(gcloud run jobs executions describe $EXECUTION_ID --region us-central1 --format='value(status.state)')
+          echo "Current job status: $STATUS"
 
-          # Check if job completed successfully
-          if [ "$JOB_STATUS" = "SUCCEEDED" ]; then
-            echo "✅ Training job completed successfully."
-            break
-          elif [ "$JOB_STATUS" = "FAILED" ] || [ "$JOB_STATUS" = "CANCELLED" ]; then
-            echo "❌ Training job failed!"
+          if [[ "$STATUS" == "SUCCEEDED" ]]; then
+            echo "Training job completed successfully."
+            exit 0
+          elif [[ "$STATUS" == "FAILED" || "$STATUS" == "CANCELLED" ]]; then
+            echo "Training job failed or was cancelled."
             exit 1
           fi
 
-          # Check timeout condition
           CURRENT_TIME=$(date +%s)
           ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
 
-          if [ "$ELAPSED_TIME" -ge "$MAX_WAIT_TIME" ]; then
-            echo "⏳ Timeout reached! Job took longer than $MAX_WAIT_TIME seconds."
-            echo "❌ Failing the build..."
+          if [[ "$ELAPSED_TIME" -ge "$TIMEOUT" ]]; then
+            echo "Training job timed out after $TIMEOUT seconds."
             exit 1
           fi
 
-          sleep 10  # Wait 10 seconds before checking again
+          sleep 10
         done
+        
+
   # Step 6: Build App Docker Image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build App Image'
