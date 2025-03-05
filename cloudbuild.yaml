@@ -5,6 +5,7 @@ steps:
     id: 'Build Training Image'
     args:
       - 'build'
+      - '--network=cloudbuild'
       - '-t'
       - 'gcr.io/$PROJECT_ID/training-image'
       - '-f'
@@ -24,10 +25,11 @@ steps:
     args:
       - 'run'
       - '--rm'
+      - '-v'
+      - '/workspace:/workspace'  # This mounts the Cloud Build workspace inside the container
       - '-e'
       - 'GOOGLE_APPLICATION_CREDENTIALS=/workspace/service-account-key.json'
       - 'gcr.io/$PROJECT_ID/training-image'
-
 
 options:
   logging: CLOUD_LOGGING_ONLY
