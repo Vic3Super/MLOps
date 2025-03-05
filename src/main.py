@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)  # Global logger
 from google.auth import default
 
 credentials, project = default()
-print(f"Authenticated with project: {project}")
+logger.info(f"Authenticated with project: {project}")
 
 
 
