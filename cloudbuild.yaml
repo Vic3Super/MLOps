@@ -11,13 +11,29 @@ steps:
       - 'Dockerfile-training'
       - '.'
 
-  # Step 4: Run Training Docker Container
+  # Step 4: Push Training Image to Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'Run Training Container'
+    id: 'Push Training Image'
     args:
-      - 'run'
-      - '--rm'
+      - 'push'
       - 'gcr.io/$PROJECT_ID/training-image'
 
-options:
-  logging: CLOUD_LOGGING_ONLY
+  # Step 5: Deploy Training Image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy to Cloud Run'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'training-service'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/training-image'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'us-west1'
+      - '--allow-unauthenticated'  # Remove this if you want authentication
+      - '--memory'
+      - '1Gi'
+      - '--timeout'
+      - '600s'
