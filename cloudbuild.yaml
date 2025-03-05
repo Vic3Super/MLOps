@@ -1,4 +1,15 @@
 steps:
+   # Step 1: Run Tests
+  - name: "python:3.12"
+    id: "run-tests"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        echo "Running tests..."
+        python -m pytest tests/ || exit 1  # Stop build if tests fail
 
   # Step 2: Build the Training Docker Image
   - name: 'gcr.io/cloud-builders/docker'
@@ -12,6 +23,7 @@ steps:
       - 'Dockerfile-training'
       - '.'
 
+  # Step 3: Fetch serving account keys
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Fetch Service Account Key'
     entrypoint: 'gsutil'
@@ -20,6 +32,7 @@ steps:
       - 'gs://service-account-key-training/keys.json'
       - '/workspace/service-account-key.json'  # Ensure the file name matches throughout
 
+  # Step 4: run docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Run Docker Container'
     args:
@@ -30,6 +43,44 @@ steps:
       - '-e'
       - 'GOOGLE_APPLICATION_CREDENTIALS=/workspace/service-account-key.json'
       - 'gcr.io/$PROJECT_ID/training-image'
+
+
+  # Step 5: Build App Docker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build App Image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/app-image'
+      - '-f'
+      - 'Dockerfile-app'
+      - '.'
+
+  # Step 6: Push App Image to Google Container Registry (GCR)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push App Image to GCR'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/app-image'
+
+  # Step 7: Deploy App Image to Cloud Run (Only this service runs continuously)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Deploy to Cloud Run'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'my-mlflow-app'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/app-image'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'us-west1'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '1Gi'
+      - '--set-env-vars'
+      - 'MODEL_TYPE=champion'
 
 options:
   logging: CLOUD_LOGGING_ONLY
