@@ -37,3 +37,6 @@ steps:
       - '1Gi'
       - '--timeout'
       - '600s'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
