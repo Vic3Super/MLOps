@@ -29,10 +29,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)  # Global logger
 
 
-from google.auth import default
+#from google.auth import default
 
-credentials, project = default()
-logger.info(f"Authenticated with project: {project}")
+#credentials, project = default()
+#logger.info(f"Authenticated with project: {project}")
 
 
 

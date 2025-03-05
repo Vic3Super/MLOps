@@ -12,14 +12,6 @@ export TEST_RUN
 TRAINING_SIZE=$(jq -r '.TRAINING_SIZE' /app/configs/config.json)
 export TRAINING_SIZE
 
-# Check if authentication is set up
-if gcloud auth list --format="value(account)" | grep -q "@"; then
-    echo "✅ Google Cloud authentication is active."
-else
-    echo "❌ Google Cloud authentication is missing!"
-    exit 1
-fi
-
 
 #
 # export GOOGLE_APPLICATION_CREDENTIALS=/app/configs/keys.json
