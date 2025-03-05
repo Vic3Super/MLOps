@@ -12,7 +12,7 @@ WORKDIR /app
 
 # Copy application files
 COPY . /app
-
+ENV GOOGLE_APPLICATION_CREDENTIALS=/workspace/service-account-key.json
 # Install local requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
