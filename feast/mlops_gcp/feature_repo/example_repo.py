@@ -19,7 +19,6 @@ trip_features = FeatureView(
     name="trip_features",
     entities=[trip_entity],
     schema=[
-        #Field(name="trip_seconds", dtype=Float32),
         Field(name="trip_miles", dtype=Float32),
         Field(name="payment_type", dtype=String),
         Field(name="trip_total", dtype=Float32),

@@ -63,6 +63,9 @@ def get_new_data(client, project_id, dataset_name):
     # Convert to DataFrame
     df = query_job.result().to_dataframe()
 
+    if df.empty:
+        return None
+
     # Convert all object-type columns to string
     df = df.astype({col: "string" for col in df.select_dtypes(include=["object"]).columns})
     df = df.astype({col: "float64" for col in df.select_dtypes(include=["int64"]).columns})  # Convert int to float
@@ -87,19 +90,38 @@ def run_target_drift_analysis(reference_df, current_df):
     target_drift_report.run(reference_data=reference_df, current_data=current_df)
     return target_drift_report.as_dict()
 
-def run_performance_analysis(current_df):
+def run_performance_analysis(current_df, outlier_threshold=1.5):
     # Convert to float
     y_actual = current_df["ground_truth"].astype(float)
     y_pred = current_df["prediction"].astype(float)
 
+    # Detect and remove outliers using the IQR method
+    Q1 = np.percentile(y_actual, 25)
+    Q3 = np.percentile(y_actual, 75)
+    IQR = Q3 - Q1
+
+    lower_bound = Q1 - outlier_threshold * IQR
+    upper_bound = Q3 + outlier_threshold * IQR
+
+    # Mask to filter out extreme values
+    valid_mask = (y_actual >= lower_bound) & (y_actual <= upper_bound)
+    y_actual_filtered = y_actual[valid_mask]
+    y_pred_filtered = y_pred[valid_mask]
+
+    # Ensure there are enough valid points to compute metrics
+    if len(y_actual_filtered) < 2:
+        return {
+            "Error": "Not enough valid data points after removing outliers."
+        }
+
     # Compute errors
-    mae = mean_absolute_error(y_actual, y_pred)
-    rmse = mean_squared_error(y_actual, y_pred, squared=False)  # squared=False returns RMSE
-    r2 = r2_score(y_actual, y_pred)
+    mae = mean_absolute_error(y_actual_filtered, y_pred_filtered)
+    rmse = mean_squared_error(y_actual_filtered, y_pred_filtered, squared=False)  # squared=False returns RMSE
+    r2 = r2_score(y_actual_filtered, y_pred_filtered)
 
     # Standardized errors
-    mean_actual = np.mean(y_actual)
-    actual_range = np.ptp(y_actual)  # ptp = max - min
+    mean_actual = np.mean(y_actual_filtered)
+    actual_range = np.ptp(y_actual_filtered)  # ptp = max - min
 
     mae_standardized = mae / mean_actual if mean_actual != 0 else np.nan
     rmse_standardized = rmse / mean_actual if mean_actual != 0 else np.nan
@@ -107,17 +129,16 @@ def run_performance_analysis(current_df):
     mae_minmax = mae / actual_range if actual_range != 0 else np.nan
     rmse_minmax = rmse / actual_range if actual_range != 0 else np.nan
 
-
     return {
+        "Data Points Used": len(y_actual_filtered),
         "MAE": mae,
-        "MAE_standardized_by_mean": mae_standardized,
-        "MAE_standardized_by_range": mae_minmax,
+        "MAE (Standardized by Mean)": mae_standardized,
+        "MAE (Standardized by Range)": mae_minmax,
         "RMSE": rmse,
-        "RMSE_standardized_by_mean": rmse_standardized,
-        "RMSE_standardized_by_range": rmse_minmax,
+        "RMSE (Standardized by Mean)": rmse_standardized,
+        "RMSE (Standardized by Range)": rmse_minmax,
         "R2": r2
     }
-
 
 def cloud_function_entry_point(request):
     """Cloud Function entry point that only processes POST requests."""
@@ -141,6 +162,9 @@ def process_event():
 
     training_data = get_training_data(client, PROJECT_ID, DATASET_NAME)
     new_data = get_new_data(client, PROJECT_ID, DATASET_NAME)
+
+    if new_data.empty:
+        return "No new data to monitor", 200
 
     new_data = new_data.dropna(subset=["ground_truth"])
 
