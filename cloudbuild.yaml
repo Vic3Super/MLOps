@@ -1,5 +1,17 @@
 steps:
-  # Step 1: Build the Training Docker Image
+   # Step 1: Run Tests
+  - name: "python:3.12"
+    id: "run-tests"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        echo "Running tests..."
+        python -m pytest tests/ || exit 1  # Stop build if tests fail
+
+  # Step 2: Build the Training Docker Image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build Training Image'
     args:
@@ -10,14 +22,14 @@ steps:
       - 'Dockerfile-training'
       - '.'
 
-  # Step 2: Push Training Image to Google Container Registry
+  # Step 3: Push Training Image to Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Push Training Image'
     args:
       - 'push'
       - 'gcr.io/$PROJECT_ID/training-image'
 
-  # Step 3: Create a Cloud Run Job (Only Needs to be Done Once)
+  # Step 4: Create a Cloud Run Job (Only Needs to be Done Once)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Create Cloud Run Job'
     entrypoint: 'gcloud'
@@ -39,17 +51,62 @@ steps:
       - '--max-retries'
       - '1'
 
-  # Step 4: Execute the Training Job
+  # Step 5: Execute the Training Job and Wait for Completion
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Run Training Job'
-    entrypoint: 'gcloud'
+    entrypoint: 'sh'
+    args:
+      - "-c"
+      - |
+        echo "Executing Cloud Run Job..."
+        JOB_EXECUTION_ID=$(gcloud run jobs execute training-job --region=us-central1 --format='value(status.latestCreatedExecution)')
+
+        echo "Waiting for job execution: $JOB_EXECUTION_ID to complete..."
+        gcloud run jobs executions describe $JOB_EXECUTION_ID --region=us-central1 --format='value(status.state)' | grep -q "SUCCEEDED"
+
+        if [ $? -ne 0 ]; then
+          echo "❌ Training job failed!"
+          exit 1
+        fi
+
+        echo "✅ Training job completed successfully."
+
+  # Step 6: Build App Docker Image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build App Image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/app-image'
+      - '-f'
+      - 'Dockerfile-app'
+      - '.'
+
+  # Step 7: Push App Image to Google Container Registry (GCR)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push App Image to GCR'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/app-image'
+
+  # Step 8: Deploy App Image to Cloud Run (Only this service runs continuously)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Deploy to Cloud Run'
     args:
       - 'run'
-      - 'jobs'
-      - 'execute'
-      - 'training-job'
+      - 'deploy'
+      - 'my-mlflow-app'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/app-image'
+      - '--platform'
+      - 'managed'
       - '--region'
-      - 'us-central1'
+      - 'us-west1'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '1Gi'
+      - '--set-env-vars'
+      - 'MODEL_TYPE=champion'
 
 options:
   logging: CLOUD_LOGGING_ONLY

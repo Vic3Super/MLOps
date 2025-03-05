@@ -13,19 +13,9 @@ WORKDIR /app
 # Copy application files
 COPY . /app
 
-# Include service account for local testing
-#COPY configs/keys.json /app/keys.json
-
 # Install local requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
-
-#ENV GOOGLE_APPLICATION_CREDENTIALS=/etc/gcloud/service-account.json
-# Expose the port the app runs on
-#EXPOSE 8080
-
-# Use the entrypoint script to fetch requirements and start the app
-#COPY Docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Set the entrypoint script
