@@ -1,6 +1,5 @@
 steps:
-
-  # Step 3: Build Training Docker Image
+  # Step 1: Build the Training Docker Image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build Training Image'
     args:
@@ -11,32 +10,46 @@ steps:
       - 'Dockerfile-training'
       - '.'
 
-  # Step 4: Push Training Image to Google Container Registry
+  # Step 2: Push Training Image to Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Push Training Image'
     args:
       - 'push'
       - 'gcr.io/$PROJECT_ID/training-image'
 
-  # Step 5: Deploy Training Image to Cloud Run
+  # Step 3: Create a Cloud Run Job (Only Needs to be Done Once)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Deploy to Cloud Run'
+    id: 'Create Cloud Run Job'
     entrypoint: 'gcloud'
     args:
       - 'run'
-      - 'deploy'
-      - 'training-service'
+      - 'jobs'
+      - 'create'
+      - 'training-job'
       - '--image'
       - 'gcr.io/$PROJECT_ID/training-image'
-      - '--platform'
-      - 'managed'
       - '--region'
-      - 'us-west1'
-      - '--allow-unauthenticated'  # Remove this if you want authentication
+      - 'us-central1'
+      - '--task-timeout'
+      - '1800s'  # 30 minutes max runtime
       - '--memory'
-      - '1Gi'
-      - '--timeout'
-      - '600s'
+      - '2Gi'
+      - '--cpu'
+      - '2'
+      - '--max-retries'
+      - '1'
+
+  # Step 4: Execute the Training Job
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Run Training Job'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'jobs'
+      - 'execute'
+      - 'training-job'
+      - '--region'
+      - 'us-central1'
 
 options:
   logging: CLOUD_LOGGING_ONLY
