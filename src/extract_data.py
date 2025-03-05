@@ -87,7 +87,7 @@ def extract_data(data: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-
+# Some test
 def remove_outliers(df: pd.DataFrame) -> pd.DataFrame:
     """
     Removes outliers from numeric columns using the Interquartile Range (IQR) method.
