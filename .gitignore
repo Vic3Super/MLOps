@@ -3,7 +3,6 @@ taxi_Trips__2024.csv
 # Exclude the entire .idea folder
 .idea/*1
 
-configs/keys.json
 
 tests
 
