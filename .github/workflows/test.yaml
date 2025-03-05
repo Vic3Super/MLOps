@@ -24,6 +24,14 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+
+      - name: Set up Google Cloud
+        uses: google-github-actions/setup-gcloud@v0.7.0
+        with:
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          project_id: carbon-relic-439014-t0  # Replace with your Google Cloud project ID
+          export_default_credentials: true
+
       - name: Run tests
         run: |
           python -m pytest tests/ --maxfail=1 --disable-warnings  # Example with pytest
