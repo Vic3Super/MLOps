@@ -35,7 +35,7 @@ def initialize_bigquery_client():
 
 def get_training_data(client, project_id, dataset_name):
     table_id = f"{project_id}.{dataset_name}.training_data"
-    query = f"SELECT * FROM {table_id}"
+    query = f"SELECT * FROM `{table_id}` WHERE status = 'ACTIVE'"
     query_job = client.query(query)
     # Convert to DataFrame
     df = query_job.result().to_dataframe()
@@ -43,7 +43,7 @@ def get_training_data(client, project_id, dataset_name):
     # Convert all object-type columns to string
     df = df.astype({col: "string" for col in df.select_dtypes(include=["object"]).columns})  # Convert object to string
     df = df.astype({col: "float64" for col in df.select_dtypes(include=["int64"]).columns})  # Convert int to float
-
+    df = df.drop(columns=["status"])
     return df
 
 

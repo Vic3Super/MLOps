@@ -3,7 +3,7 @@ import logging
 from feast import FeatureView, FeatureStore, RepoConfig
 
 # Setup logger
-logger = logging.getLogger(__name__)  # Ensures logging is consistent with main.py
+logger = logging.getLogger(__name__)
 
 def load_data_from_feature_store(size=100000):
     """

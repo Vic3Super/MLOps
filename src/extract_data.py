@@ -125,7 +125,8 @@ def remove_outliers(df: pd.DataFrame) -> pd.DataFrame:
 
 def upload_training_data_to_bigquery(cleaned_df: pd.DataFrame):
     """
-    Uploads a cleaned DataFrame to a BigQuery table.
+    Uploads a cleaned DataFrame to a BigQuery table, setting new data to "ACTIVE"
+    and marking existing data as "INACTIVE".
 
     Args:
         cleaned_df (pd.DataFrame): The cleaned DataFrame to upload.
@@ -145,9 +146,26 @@ def upload_training_data_to_bigquery(cleaned_df: pd.DataFrame):
 
     client = bigquery.Client()
 
-    # Configure job to replace table contents
+    # Step 1: Update existing records to "INACTIVE"
+    update_query = f"""
+        UPDATE `{table_id}`
+        SET status = 'INACTIVE'
+        WHERE status = 'ACTIVE'
+    """
+    try:
+        logger.info(f"Updating existing records in {table_id} to 'INACTIVE'...")
+        client.query(update_query).result()
+        logger.info("Successfully updated existing records to 'INACTIVE'.")
+    except Exception as e:
+        logger.critical(f"Failed to update existing records. Error: {e}", exc_info=True)
+        raise RuntimeError(f"Failed to update existing records: {e}")
+
+    # Step 2: Add a "status" column with "ACTIVE" to the new data
+    cleaned_df["status"] = "ACTIVE"
+
+    # Configure job to append new rows
     job_config = bigquery.LoadJobConfig(
-        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND  # Append instead of replacing
     )
 
     logger.info(f"Starting BigQuery upload to table: {table_id}")
