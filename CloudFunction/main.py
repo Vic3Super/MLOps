@@ -129,14 +129,15 @@ def run_performance_analysis(current_df, outlier_threshold=1.5):
     mae_minmax = mae / actual_range if actual_range != 0 else np.nan
     rmse_minmax = rmse / actual_range if actual_range != 0 else np.nan
 
+
     return {
         "Data Points Used": len(y_actual_filtered),
         "MAE": mae,
-        "MAE (Standardized by Mean)": mae_standardized,
-        "MAE (Standardized by Range)": mae_minmax,
+        "MAE_standardized_by_mean": mae_standardized,
+        "MAE_standardized_by_range": mae_minmax,
         "RMSE": rmse,
-        "RMSE (Standardized by Mean)": rmse_standardized,
-        "RMSE (Standardized by Range)": rmse_minmax,
+        "RMSE_standardized_by_mean": rmse_standardized,
+        "RMSE_standardized_by_range": rmse_minmax,
         "R2": r2
     }
 
@@ -211,7 +212,7 @@ def publish(performance_metrics, report_dict_data, report_dict_target, project_i
 
 
     retrain = False
-    if performance_metrics["RMSE_standardized_by_mean"] > 0.3 or performance_metrics["R2"] <= 0.8:
+    if performance_metrics["MAE_standardized_by_mean"] > 0.3 or performance_metrics["R2"] <= 0.8:
         retrain = True
 
     # Construct message data with fixed JSON serialization
