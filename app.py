@@ -9,9 +9,6 @@ from datetime import datetime
 
 from mlflow import MlflowClient
 
-
-
-# Initialize BigQuery client
 bq_client = bigquery.Client()
 project_id = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
 dataset_name = os.getenv("DATASET_NAME", "chicago_taxi")
@@ -24,9 +21,7 @@ table_id_data = f"{project_id}.{dataset_name}.{table_name_data}"
 table_id_drivers = f"{project_id}.{dataset_name}.{table_name_drivers}"
 
 TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
-#CHALLENGER = os.getenv("CHALLENGER", "False").lower() == "true"
 MODEL_TYPE = os.getenv("MODEL_TYPE", "champion")
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 
 TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
@@ -34,14 +29,11 @@ mlflow.set_tracking_uri(TRACKING_URI)
 mlflow.autolog(disable=True)
 
 client = MlflowClient()
-#run_id = client.get_latest_versions("xgb_pipeline_taxi_regressor")[0].run_id
-
 
 run_id = client.get_model_version_by_alias("xgb_pipeline_taxi_regressor", MODEL_TYPE).run_id
 
-
 model_path = f"gs://mlflow-bucket-1998/mlruns/2/{run_id}/artifacts/model"
-requirements_path =  mlflow.artifacts.download_artifacts(f"{model_path}/requirements.txt")
+requirements_path = mlflow.artifacts.download_artifacts(f"{model_path}/requirements.txt")
 
 model = mlflow.pyfunc.load_model(model_path)
 
@@ -50,22 +42,18 @@ app = Flask(__name__)
 print(f"App initialized.")
 
 
-
 def extract_time_features(df):
-
-
     df["trip_start_timestamp"] = pd.to_datetime(df["trip_start_timestamp"])
-
-
     # Extract features from trip_start_timestamp
     df["daytime"] = df["trip_start_timestamp"].dt.hour
-    df['day_type'] = df['trip_start_timestamp'].dt.weekday.apply(lambda x: 'weekend' if x >= 5 else 'weekday').astype(str)
+    df['day_type'] = df['trip_start_timestamp'].dt.weekday.apply(lambda x: 'weekend' if x >= 5 else 'weekday').astype(
+        str)
     df['month'] = df['trip_start_timestamp'].dt.month
     df['day_of_week'] = df['trip_start_timestamp'].dt.dayofweek
     df['day_of_month'] = df['trip_start_timestamp'].dt.day
-    #df.drop(columns=["trip_start_timestamp"], inplace=True)
 
     return df
+
 
 def convert_features(df):
     # Convert numeric columns, ensuring None/NaN values do not cause errors
@@ -101,7 +89,6 @@ def predict():
         WHERE taxi_id IN UNNEST(@taxi_ids)
         """
 
-
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ArrayQueryParameter("taxi_ids", "STRING", taxi_ids)
@@ -113,11 +100,11 @@ def predict():
 
         data = data.merge(avg_tips_df, on='taxi_id', how='left')
 
-        #data = data.replace(np.nan, None)
-        #data = data.where(pd.notna(data), None)
+        # data = data.replace(np.nan, None)
+        # data = data.where(pd.notna(data), None)
 
         data = convert_features(data)
-        #prediction_data = data_extracted.drop(columns=["unique_key", "taxi_id"])
+        # prediction_data = data_extracted.drop(columns=["unique_key", "taxi_id"])
         predictions = model.predict(data)
 
         # Prepare data for BigQuery
@@ -148,7 +135,7 @@ def predict():
                 "prediction": float(pred),
                 "ground_truth": row.get("trip_total"),
                 "timestamp": timestamp_now,
-                "model_type":MODEL_TYPE # to check versioning
+                "model_type": MODEL_TYPE  # to check versioning
             })
 
         logging.info(f"Prepared {len(rows_to_insert_data)} rows for data table")
@@ -179,7 +166,8 @@ def predict():
 def health_check():
     return jsonify({"status": "healthy"})
 
+
 if __name__ == "__main__":
     # Use the PORT environment variable or default to 8080
-  #  port = int(os.environ.get("PORT", 8080))
+    #  port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=8080, debug=False)
