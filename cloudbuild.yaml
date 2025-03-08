@@ -1,6 +1,6 @@
 steps:
 
-  # Step 6: Fetch the OLD active revision (before deploying a new version)
+  # Step 1: Fetch the OLD active revision (before deploying a new version)
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Fetch Old Revision'
     entrypoint: 'bash'
@@ -97,7 +97,7 @@ steps:
       - 'MODEL_TYPE=challenger'
       - '--no-traffic'
 
-  # Step 6: Fetch the NEW revision (latest created revision)
+  # Step 8: Fetch the NEW revision (latest created revision)
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Fetch New Revision'
     entrypoint: 'bash'
@@ -112,7 +112,7 @@ steps:
         echo "New revision: $(cat /workspace/new_revision.txt)"
 
 
-# Step 7: Assign 80% traffic to the OLD revision and 20% to the NEW revision
+  # Step 9: Assign 50% traffic to the OLD revision and 20% to the NEW revision
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Set Traffic Split'
     entrypoint: 'bash'
