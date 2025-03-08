@@ -35,7 +35,7 @@ def initialize_bigquery_client():
 
 def get_training_data(client, project_id, dataset_name):
     table_id = f"{project_id}.{dataset_name}.training_data"
-    query = f"SELECT * FROM {table_id}"
+    query = f"SELECT * FROM {table_id} WHERE status = 'ACTIVE'"
     query_job = client.query(query)
     # Convert to DataFrame
     df = query_job.result().to_dataframe()
@@ -95,7 +95,7 @@ def run_performance_analysis(current_df, outlier_threshold=1.5):
     y_actual = current_df["ground_truth"].astype(float)
     y_pred = current_df["prediction"].astype(float)
 
-    # Detect and remove outliers using the IQR method
+    # Detect and remove outliers using the IQR method since real data can also be incorrect
     Q1 = np.percentile(y_actual, 25)
     Q3 = np.percentile(y_actual, 75)
     IQR = Q3 - Q1
@@ -121,7 +121,7 @@ def run_performance_analysis(current_df, outlier_threshold=1.5):
 
     # Standardized errors
     mean_actual = np.mean(y_actual_filtered)
-    actual_range = np.ptp(y_actual_filtered)  # ptp = max - min
+    actual_range = np.ptp(y_actual_filtered)
 
     mae_standardized = mae / mean_actual if mean_actual != 0 else np.nan
     rmse_standardized = rmse / mean_actual if mean_actual != 0 else np.nan
@@ -146,18 +146,15 @@ def cloud_function_entry_point(request):
     if request.method != 'POST':
         return 'Only POST requests are allowed', 405
 
-    # Proceed with processing when a POST request is received
     return process_event()
 
 
 
 def process_event():
     """Cloud Function entry point."""
-    # Load configuration
     PROJECT_ID = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
     DATASET_NAME = os.getenv("DATASET_NAME", "chicago_taxi")
 
-    # Initialize the BigQuery client
     client = initialize_bigquery_client()
 
     training_data = get_training_data(client, PROJECT_ID, DATASET_NAME)
@@ -197,12 +194,12 @@ def publish(performance_metrics, report_dict_data, report_dict_target, project_i
             return {k: convert_numpy_types(v) for k, v in obj.items()}
         elif isinstance(obj, list):
             return [convert_numpy_types(v) for v in obj]
-        elif isinstance(obj, np.integer):  # Convert np.int64, np.int32
+        elif isinstance(obj, np.integer):
             return int(obj)
-        elif isinstance(obj, np.floating):  # Convert np.float64, np.float32
+        elif isinstance(obj, np.floating):
             return float(obj)
         else:
-            return obj  # Return original value if not a NumPy type
+            return obj
 
     # Convert NumPy types before JSON serialization
     report_dict_data = convert_numpy_types(report_dict_data)
@@ -214,7 +211,6 @@ def publish(performance_metrics, report_dict_data, report_dict_target, project_i
     if performance_metrics["RMSE_standardized_by_mean"] > 0.3 or performance_metrics["R2"] <= 0.8:
         retrain = True
 
-    # Construct message data with fixed JSON serialization
     message_data = {
         "timestamp": datetime.utcnow().isoformat(),  # Current timestamp in ISO 8601 format
         "data_drift_report": json.dumps(report_dict_data),
@@ -224,22 +220,20 @@ def publish(performance_metrics, report_dict_data, report_dict_target, project_i
     }
 
     if retrain:
-        # project_id = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
         publisher = pubsub_v1.PublisherClient()
         topic_path = publisher.topic_path(project_id, "monitoring_retrain")
 
         message_bytes = json.dumps(message_data).encode("utf-8")
         future = publisher.publish(topic_path, message_bytes)
-        future.result()  # Wait for the publishing to complete
+        future.result()
         return
 
-    # project_id = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
     publisher = pubsub_v1.PublisherClient()
     topic_path = publisher.topic_path(project_id, "monitoring_alert")
 
     message_bytes = json.dumps(message_data).encode("utf-8")
     future = publisher.publish(topic_path, message_bytes)
-    future.result()  # Wait for the publishing to complete
+    future.result()
     return
 
 
