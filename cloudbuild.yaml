@@ -1,5 +1,31 @@
 steps:
-   # Step 1: Run Tests
+
+  # Step 6: Fetch the OLD active revision (before deploying a new version)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Fetch Old Revision'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run revisions list \
+          --service=my-mlflow-app \
+          --region=us-west1 \
+          --filter="status.conditions.type['Active'].status:'True'" \
+          --format="value(metadata.name)" > /workspace/active_revisions.txt
+
+        echo "Checking active revisions..."
+        cat /workspace/active_revisions.txt
+
+        if [ "$(wc -l < /workspace/active_revisions.txt)" -gt 1 ]; then
+          echo "ERROR: More than one active revision found!"
+          exit 1  # Stop the build process
+        fi
+
+        cat /workspace/active_revisions.txt > /workspace/old_revision.txt
+        echo "Old active revision: $(cat /workspace/old_revision.txt)"
+  
+
+  # Step 1: Run Tests
   - name: "python:3.12"
     id: "run-tests"
     entrypoint: "sh"
@@ -80,7 +106,36 @@ steps:
       - '--memory'
       - '1Gi'
       - '--set-env-vars'
-      - 'MODEL_TYPE=champion'
+      - 'MODEL_TYPE=challenger'
+      - '--no-traffic'
+
+  # Step 6: Fetch the NEW revision (latest created revision)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Fetch New Revision'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run revisions list \
+          --service=my-mlflow-app \
+          --region=us-west1 \
+          --format="value(metadata.name)" \
+          --sort-by="~createTime" | head -n1 > /workspace/new_revision.txt
+        echo "New revision: $(cat /workspace/new_revision.txt)"
+
+
+# Step 7: Assign 80% traffic to the OLD revision and 20% to the NEW revision
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Set Traffic Split'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Routing traffic: $(cat /workspace/old_revision.txt)=50%, $(cat /workspace/new_revision.txt)=50%"
+        gcloud run services update-traffic my-mlflow-app \
+          --region us-west1 \
+          --to-revisions="$(cat /workspace/old_revision.txt)=50,$(cat /workspace/new_revision.txt)=50"
+
 
 options:
   logging: CLOUD_LOGGING_ONLY
