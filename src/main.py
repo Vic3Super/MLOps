@@ -1,8 +1,6 @@
 import os
 import sys
 import logging
-import traceback
-import pandas as pd
 from mlflow import MlflowClient
 from mlflow.models import infer_signature
 
@@ -10,7 +8,7 @@ from extract_data import extract_data
 from load_data import load_data_from_feature_store
 from extract_data import upload_training_data_to_bigquery
 from train import create_pipeline, train_pipeline
-from helper import log_to_mlflow, setup_mlflow, log_config
+from helper import log_to_mlflow, setup_mlflow
 from validate import validate_serving, validate_model
 
 # Setup Logging
@@ -101,11 +99,6 @@ def main():
             logger.error(f"Error logging to MLflow: {e}")
             sys.exit(1)
 
-        try:
-            log_config(experiment_id=experiment.experiment_id, run_id=run_id)
-            logger.info("Configuration logged successfully.")
-        except Exception as e:
-            logger.warning(f"Failed to log config: {e}")  # Non-critical
 
         try:
             validated_serving = validate_serving(example_input, model_uri)

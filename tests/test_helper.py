@@ -10,7 +10,7 @@ import pytest
 from mlflow import MlflowException
 from sklearn.pipeline import Pipeline
 
-from src.helper import setup_mlflow, log_to_mlflow, log_config
+from src.helper import setup_mlflow, log_to_mlflow
 
 
 def test_mlflow_connection(experiment_name="Test_Experiment"):
@@ -160,26 +160,4 @@ def test_model_logging_failure(mock_start_run, mock_log_model, valid_inputs):
     mock_log_model.assert_called_once()
 
 
-
-# Sample experiment_id and run_id
-experiment_id = "test_experiment"
-run_id = "test_run"
-
-# Define the expected file path (should match your function logic)
-json_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../configs/config.json"))
-@pytest.mark.parametrize("exp_id, run_id", [
-    ("", "valid"),  # Missing experiment_id
-    ("valid", ""),  # Missing run_id
-    ("", ""),       # Both missing
-])
-def test_log_config_missing_arguments(exp_id, run_id):
-    """Test if the function raises ValueError when required arguments are missing."""
-    with pytest.raises(ValueError, match="Both 'experiment_id' and 'run_id' must be provided and non-empty."):
-        log_config(exp_id, run_id)
-
-@patch("os.path.exists", side_effect=lambda path: False if path == os.path.dirname(json_file_path) else True)
-def test_log_config_directory_missing(mock_exists):
-    """Test if the function raises FileNotFoundError when the config directory does not exist."""
-    with pytest.raises(FileNotFoundError, match="Config directory does not exist"):
-        log_config(experiment_id, run_id)
 

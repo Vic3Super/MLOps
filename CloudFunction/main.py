@@ -57,7 +57,7 @@ def get_new_data(client, project_id, dataset_name):
     ON p.unique_key = d.unique_key
     LEFT JOIN chicago_taxi.driver_aggregates as a
     ON d.taxi_id = a.taxi_id
-    WHERE p.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
+    WHERE p.timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY);
     """
     query_job = client.query(query)
     # Convert to DataFrame
@@ -164,7 +164,7 @@ def process_event():
     training_data = get_training_data(client, PROJECT_ID, DATASET_NAME)
     new_data = get_new_data(client, PROJECT_ID, DATASET_NAME)
 
-    if new_data.empty:
+    if new_data is None or new_data.empty:
         return "No new data to monitor", 200
 
     new_data = new_data.dropna(subset=["ground_truth"])
