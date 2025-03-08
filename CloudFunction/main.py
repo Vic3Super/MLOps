@@ -35,7 +35,7 @@ def initialize_bigquery_client():
 
 def get_training_data(client, project_id, dataset_name):
     table_id = f"{project_id}.{dataset_name}.training_data"
-    query = f"SELECT * FROM {table_id} WHERE status = 'ACTIVE'"
+    query = f"SELECT * FROM `{table_id}` WHERE status = 'ACTIVE'"
     query_job = client.query(query)
     # Convert to DataFrame
     df = query_job.result().to_dataframe()
