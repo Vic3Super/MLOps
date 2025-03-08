@@ -23,14 +23,6 @@ steps:
       - 'Dockerfile-training'
       - '.'
 
-  # Step 6: Push App Image to Google Container Registry (GCR)
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'Push App Image to GCR'
-    args:
-      - 'push'
-      - 'gcr.io/$PROJECT_ID/training-image'
-
-
   # Step 3: Fetch serving account keys
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Fetch Service Account Key'
