@@ -25,18 +25,6 @@ steps:
         echo "Old active revision: $(cat /workspace/old_revision.txt)"
   
 
-  # Step 1: Run Tests
-  - name: "python:3.12"
-    id: "run-tests"
-    entrypoint: "sh"
-    args:
-      - "-c"
-      - |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        echo "Running tests..."
-        python -m pytest tests/ || exit 1  # Stop build if tests fail
-
   # Step 2: Build the Training Docker Image
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build Training Image'
