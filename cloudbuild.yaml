@@ -1,5 +1,4 @@
 steps:
-
   # Step 1: Fetch the OLD active revision (before deploying a new version)
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Fetch Old Revision'
@@ -123,7 +122,6 @@ steps:
         gcloud run services update-traffic my-mlflow-app \
           --region us-west1 \
           --to-revisions="$(cat /workspace/old_revision.txt)=50,$(cat /workspace/new_revision.txt)=50"
-
 
 options:
   logging: CLOUD_LOGGING_ONLY
