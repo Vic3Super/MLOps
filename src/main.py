@@ -115,7 +115,7 @@ def main():
             client.set_registered_model_tag("xgb_pipeline_taxi_regressor", "task", "regressor")
             # Set model version tag
             client.set_model_version_tag("xgb_pipeline_taxi_regressor", model_version, "validation_status", "approved")
-            client.set_registered_model_alias("xgb_pipeline_taxi_regressor", "champion", model_version)
+            client.set_registered_model_alias("xgb_pipeline_taxi_regressor", "challenger", model_version)
 
         except Exception as e:
             logger.warning(f"Model validation failed: {e}")  # Non-critical
