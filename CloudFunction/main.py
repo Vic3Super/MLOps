@@ -8,6 +8,7 @@ from evidently.report import Report
 from evidently.metric_preset import DataDriftPreset, TargetDriftPreset
 from datetime import datetime
 from google.cloud import pubsub_v1
+from mlflow import MlflowClient
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -207,12 +208,87 @@ def get_cloud_run_revisions():
     return champion_revision, challenger_revision
 
 
-def promote_revision(revision):
-    """Promote the revision model to 100% traffic."""
+def roll_back_challenger(revision):
+    """Promote the champion model back to 100% traffic."""
     if not revision:
-        print("⚠️ No Challenger revision found. Cannot promote.")
+        print("⚠️ No Champion revision found. Cannot promote.")
         return
     update_cloud_run_traffic(revision)
+
+
+def update_mlflow_registry_for_challenger():
+    import mlflow
+    from mlflow import MlflowClient
+    TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
+    mlflow.set_tracking_uri(TRACKING_URI)
+    client = MlflowClient()
+    client.get_registered_model("xgb_pipeline_taxi_regressor")
+    challenger = client.get_model_version_by_alias("xgb_pipeline_taxi_regressor", "challenger")
+    challenger_version = challenger.version
+    client.set_registered_model_alias("xgb_pipeline_taxi_regressor", "champion", challenger_version)
+    client.delete_registered_model_alias("xgb_pipeline_taxi_regressor", "challenger")
+    return
+
+def promote_challenger():
+    """Redeploy Cloud Run service with a new revision and direct 100% traffic to it."""
+    client = run_v2.ServicesClient()
+    service_path = client.service_path(PROJECT_ID, REGION, SERVICE_NAME)
+    new_env_var_key = "MODEL_TYPE"
+    new_env_var_value = "champion"
+
+    try:
+        update_mlflow_registry_for_challenger()
+    except Exception as e:
+        print(f" Failed to change model in MLflow Model Registry.")
+
+    # Get existing service configuration
+    try:
+        service = client.get_service(name=service_path)
+    except Exception as e:
+        print(f"❌ Failed to fetch Cloud Run service: {e}")
+        return
+
+    # Modify environment variables
+    env_variables = {env.name: env.value for env in service.template.containers[0].env}
+
+    # Add or update the environment variable
+    env_variables[new_env_var_key] = new_env_var_value
+
+    # Apply the updated environment variables
+    service.template.containers[0].env = [
+        run_v2.EnvVar(name=key, value=value) for key, value in env_variables.items()
+    ]
+
+    # Deploy the updated service (this creates a new revision)
+    try:
+        operation = client.update_service(service=service)
+        updated_service = operation.result()  # Wait for deployment to complete
+
+        # Get the latest revision name
+        latest_revision_path = updated_service.latest_ready_revision
+        if not latest_revision_path:
+            print("❌ Failed to fetch latest revision.")
+            return
+
+        print(f"✅ New revision {latest_revision_path} deployed.")
+        latest_revision = latest_revision_path.split("/")[-1]  # Extract just the revision name
+
+        # Now, shift 100% traffic to the new revision
+        updated_service.traffic = [
+            run_v2.
+            TrafficTarget(percent=100,
+                          revision=latest_revision,
+                          type_=TrafficTargetAllocationType(2))
+        ]
+
+        # Apply the traffic update
+        operation = client.update_service(service=updated_service)
+        operation.result()  # Wait for the update to complete
+
+        print(f"✅ Successfully shifted 100% traffic to {latest_revision}")
+
+    except Exception as e:
+        print(f"❌ Failed to redeploy Cloud Run: {e}")
 
 
 def compare_performance_analysis(challenger_performance_metrics, champion_performance_metrics):
@@ -257,13 +333,13 @@ def compare_performance_analysis(challenger_performance_metrics, champion_perfor
     # Case 2: Challenger Performs Worse -> Rollback to Champion
     if challenger_rmse > champion_rmse and challenger_r2 < champion_r2:
         print(f"⚠️ Challenger ({challenger}) underperforms compared to Champion ({champion}). Rolling back.")
-        promote_revision(champion)
+        roll_back_challenger(champion)
         return
 
     # Case 3: Challenger Performs Better -> Promote Challenger
     if challenger_rmse < champion_rmse and challenger_r2 > champion_r2:
         print(f"🚀 Challenger ({challenger}) outperforms Champion ({champion}). Promoting to 100% traffic.")
-        promote_revision(challenger)
+        promote_challenger()
         return
 
     # Case 4: Performance is Similar -> No Immediate Change
@@ -318,6 +394,9 @@ def update_cloud_run_traffic(revision):
         print(f"✅ Successfully shifted 100% traffic to {revision}")
     except Exception as e:
         print(f"❌ Failed to update traffic: {e}")
+
+    # redeploy challenger revision with new environment variable
+
 
 
 def send_email_alert(subject, message):

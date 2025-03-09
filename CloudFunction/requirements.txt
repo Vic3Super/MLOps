@@ -1,8 +1,10 @@
 google-cloud-bigquery
 google-cloud-bigquery-storage
 google-cloud-pubsub
+google-cloud-run
 db-dtypes
 pandas
 numpy
 evidently==0.5.1
 sendgrid
+mlflow~=2.18.0
