@@ -227,7 +227,6 @@ def update_mlflow_registry_for_challenger():
     challenger_version = challenger.version
     client.set_registered_model_alias("xgb_pipeline_taxi_regressor", "champion", challenger_version)
     client.delete_registered_model_alias("xgb_pipeline_taxi_regressor", "challenger")
-    return
 
 def promote_challenger():
     """Redeploy Cloud Run service with a new revision and direct 100% traffic to it."""
