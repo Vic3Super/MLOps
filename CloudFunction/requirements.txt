@@ -5,3 +5,4 @@ db-dtypes
 pandas
 numpy
 evidently==0.5.1
+sendgrid

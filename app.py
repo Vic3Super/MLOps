@@ -24,6 +24,8 @@ TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
 MODEL_TYPE = os.getenv("MODEL_TYPE", "champion")
 logging.basicConfig(level=logging.INFO)
 
+logging.info(f"USING MODLE TYPE {MODEL_TYPE}")
+
 TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
 mlflow.set_tracking_uri(TRACKING_URI)
 mlflow.autolog(disable=True)
