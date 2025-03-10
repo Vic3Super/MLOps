@@ -164,7 +164,7 @@ def test_upload_training_data_to_bigquery_success(mock_bigquery_client):
     })
 
     try:
-        upload_training_data_to_bigquery(df)
+        upload_training_data_to_bigquery(df, "123")
     except Exception:
         pytest.fail("upload_training_data_to_bigquery() raised an exception unexpectedly!")
 
@@ -175,7 +175,7 @@ def test_upload_training_data_to_bigquery_empty_df():
     empty_df = pd.DataFrame()
 
     with pytest.raises(ValueError, match="Cannot upload an empty DataFrame to BigQuery."):
-        upload_training_data_to_bigquery(empty_df)
+        upload_training_data_to_bigquery(empty_df, "123")
 
 
 ### ✅ Test: Handles BigQuery Errors Gracefully ###
@@ -192,5 +192,5 @@ def test_upload_training_data_to_bigquery_bigquery_error(mock_bigquery_client):
     })
 
     with pytest.raises(RuntimeError, match="Failed to load data into BigQuery table"):
-        upload_training_data_to_bigquery(df)
+        upload_training_data_to_bigquery(df, "123")
 
