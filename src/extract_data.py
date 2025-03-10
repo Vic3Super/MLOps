@@ -123,14 +123,14 @@ def remove_outliers(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def upload_training_data_to_bigquery(cleaned_df: pd.DataFrame):
+def upload_training_data_to_bigquery(cleaned_df: pd.DataFrame, model_run_id: str):
     """
     Uploads a cleaned DataFrame to a BigQuery table, setting new data to "ACTIVE"
     and marking existing data as "INACTIVE".
 
     Args:
         cleaned_df (pd.DataFrame): The cleaned DataFrame to upload.
-
+        model_run_id (str): The mlflow run_id of the trained model.
     Raises:
         ValueError: If `cleaned_df` is empty or None.
         RuntimeError: If there is an error during the upload to BigQuery.
@@ -146,22 +146,8 @@ def upload_training_data_to_bigquery(cleaned_df: pd.DataFrame):
 
     client = bigquery.Client()
 
-    # Step 1: Update existing records to "INACTIVE"
-    update_query = f"""
-        UPDATE `{table_id}`
-        SET status = 'INACTIVE'
-        WHERE status = 'ACTIVE'
-    """
-    try:
-        logger.info(f"Updating existing records in {table_id} to 'INACTIVE'...")
-        client.query(update_query).result()
-        logger.info("Successfully updated existing records to 'INACTIVE'.")
-    except Exception as e:
-        logger.critical(f"Failed to update existing records. Error: {e}", exc_info=True)
-        raise RuntimeError(f"Failed to update existing records: {e}")
-
     # Step 2: Add a "status" column with "ACTIVE" to the new data
-    cleaned_df["status"] = "ACTIVE"
+    cleaned_df["model_run_id"] = model_run_id
 
     # Configure job to append new rows
     job_config = bigquery.LoadJobConfig(

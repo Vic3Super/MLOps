@@ -54,15 +54,6 @@ def main():
             logger.error(f"Error extracting data: {e}")
             sys.exit(1)
 
-        TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
-        if not TEST_RUN:
-            try:
-                upload_training_data_to_bigquery(data)
-                logger.info("Training data uploaded to BigQuery.")
-            except Exception as e:
-                logger.error(f"Error uploading training data to BigQuery: {e}")
-                sys.exit(1)
-
         try:
             pipeline = create_pipeline()
             logger.info("Pipeline created successfully.")
@@ -98,6 +89,15 @@ def main():
         except Exception as e:
             logger.error(f"Error logging to MLflow: {e}")
             sys.exit(1)
+
+        TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "true"
+        if not TEST_RUN:
+            try:
+                upload_training_data_to_bigquery(data, run_id)
+                logger.info("Training data uploaded to BigQuery.")
+            except Exception as e:
+                logger.error(f"Error uploading training data to BigQuery: {e}")
+                sys.exit(1)
 
 
         try:
