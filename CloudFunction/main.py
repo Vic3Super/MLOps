@@ -12,6 +12,9 @@ from mlflow import MlflowClient
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+import mlflow
+from mlflow import MlflowClient
+
 
 PROJECT_ID = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
 REGION = os.getenv("REGION", "us-west1")
@@ -58,9 +61,9 @@ def initialize_bigquery_client():
     return bigquery.Client()
 
 
-def get_training_data(client, project_id, dataset_name):
+def get_training_data(client, project_id, dataset_name, model_run_id):
     table_id = f"{project_id}.{dataset_name}.training_data"
-    query = f"SELECT * FROM `{table_id}` WHERE status = 'ACTIVE'"
+    query = f"SELECT * FROM `{table_id}` WHERE model_run_id = '{model_run_id}'"
     query_job = client.query(query)
     # Convert to DataFrame
     df = query_job.result().to_dataframe()
@@ -68,7 +71,7 @@ def get_training_data(client, project_id, dataset_name):
     # Convert all object-type columns to string
     df = df.astype({col: "string" for col in df.select_dtypes(include=["object"]).columns})  # Convert object to string
     df = df.astype({col: "float64" for col in df.select_dtypes(include=["int64"]).columns})  # Convert int to float
-    df.drop(columns=["status"], inplace=True)
+    df.drop(columns=["model_run_id"], inplace=True)
     return df
 
 
@@ -216,13 +219,29 @@ def roll_back_challenger(revision):
     update_cloud_run_traffic(revision)
 
 
-def update_mlflow_registry_for_challenger():
-    import mlflow
-    from mlflow import MlflowClient
+def get_model_run_ids():
+    challenger_run_id = ""
+    champion_run_id = ""
     TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
     mlflow.set_tracking_uri(TRACKING_URI)
     client = MlflowClient()
-    client.get_registered_model("xgb_pipeline_taxi_regressor")
+    try:
+        challenger = client.get_model_version_by_alias("xgb_pipeline_taxi_regressor", "challenger")
+        challenger_run_id = challenger.run_id
+    except Exception as e:
+        print(e)
+        challenger_run_id = None
+
+    champion = client.get_model_version_by_alias("xgb_pipeline_taxi_regressor", "champion")
+    champion_run_id = champion.run_id
+
+    return challenger_run_id, champion_run_id
+
+def update_mlflow_registry_for_challenger():
+
+    TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
+    mlflow.set_tracking_uri(TRACKING_URI)
+    client = MlflowClient()
     challenger = client.get_model_version_by_alias("xgb_pipeline_taxi_regressor", "challenger")
     challenger_version = challenger.version
     client.set_registered_model_alias("xgb_pipeline_taxi_regressor", "champion", challenger_version)
@@ -288,7 +307,6 @@ def promote_challenger():
 
     except Exception as e:
         print(f"❌ Failed to redeploy Cloud Run: {e}")
-
 
 def compare_performance_analysis(challenger_performance_metrics, champion_performance_metrics):
     """Compare model performance and update Cloud Run traffic if necessary."""
@@ -360,7 +378,6 @@ def compare_performance_analysis(challenger_performance_metrics, champion_perfor
         """
     )
 
-
 def update_cloud_run_traffic(revision):
     """Update Cloud Run to direct 100% of traffic to the given revision."""
     client = run_v2.ServicesClient()
@@ -396,7 +413,29 @@ def update_cloud_run_traffic(revision):
 
     # redeploy challenger revision with new environment variable
 
+def data_drift_detected(data_drift_report):
+    if data_drift_report["metrics"][0]["result"]["dataset_drift"] is True:
+        return True
 
+def target_drift_detected(target_drift_report):
+    if target_drift_report["metrics"][0]["result"]["drift_detected"] is True:
+        return True
+
+def check_drift(report_target, report_data, model_type):
+    alerts = []
+    if target_drift_detected(report_target):
+        alerts.append("Target drift detected.")
+    if data_drift_detected(report_data):
+        alerts.append("Data drift detected.")
+
+    if alerts:
+        send_email_alert(
+            f"Drift Detected in {model_type} Model",
+            f"""
+            <h3>Detected Drift in deployed {model_type.lower()} model during automatic monitoring.</h3>
+            <p>{' '.join(alerts)}</p>
+            """
+        )
 
 def send_email_alert(subject, message):
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")  # Fetch from environment variables
@@ -431,8 +470,8 @@ def cloud_function_entry_point(request):
     return process_event()
 
 
-def save_to_bigquery(performance_metrics_champion, performance_metrics_challenger, report_dict_data,
-                     report_dict_target):
+def save_to_bigquery(data_drift_report_champion, data_drift_report_challenger, target_drift_champion,
+                     target_drift_challenger, performance_metrics_champion, performance_metrics_challenger, retrain):
     """Save model performance and drift reports to BigQuery."""
     client = initialize_bigquery_client()
     TABLE_NAME = "monitoring_job"
@@ -442,11 +481,13 @@ def save_to_bigquery(performance_metrics_champion, performance_metrics_challenge
     # Create the row to insert
     message_data = {
         "timestamp": datetime.utcnow().isoformat(),  # Current timestamp
-        "data_drift_report": json.dumps(report_dict_data, indent=2, cls=NumpyTypeEncoder),  # Convert dict to JSON string
-        "target_drift_report": json.dumps(report_dict_target, indent=2, cls=NumpyTypeEncoder),
+        "data_drift_report_champion": json.dumps(data_drift_report_champion, indent=2, cls=NumpyTypeEncoder),
+        "data_drift_report_challenger": json.dumps(data_drift_report_challenger, indent=2, cls=NumpyTypeEncoder),
+        "target_drift_champion": json.dumps(target_drift_champion, indent=2, cls=NumpyTypeEncoder),
+        "target_drift_challenger": json.dumps(target_drift_challenger, indent=2, cls=NumpyTypeEncoder),
         "performance_metrics_champion": json.dumps(performance_metrics_champion, indent=2, cls=NumpyTypeEncoder),
         "performance_metrics_challenger": json.dumps(performance_metrics_challenger, indent=2, cls=NumpyTypeEncoder),
-        "retrain": "False",
+        "retrain": retrain,
     }
 
     # Convert data to a list of rows (BigQuery expects an iterable)
@@ -466,61 +507,89 @@ def save_to_bigquery(performance_metrics_champion, performance_metrics_challenge
 
 def process_event():
 
+    challenger_run_id, champion_run_id = get_model_run_ids()
     client = initialize_bigquery_client()
-
-    training_data = get_training_data(client, PROJECT_ID, DATASET_NAME)
     new_data = get_new_data(client, PROJECT_ID, DATASET_NAME)
-
     if new_data is None or new_data.empty:
         return "No new data to monitor", 200
+    new_data.dropna(subset="ground_truth", inplace=True)
 
-    new_data = new_data.dropna(subset=["ground_truth"])
+    if challenger_run_id is None:
+        training_data = get_training_data(client, PROJECT_ID, DATASET_NAME, champion_run_id)
 
-    champion_data = new_data[new_data["model_type"] == "champion"]
-    challenger_data = new_data[new_data["model_type"] == "challenger"]
+        new_data = new_data.dropna(subset=["ground_truth"])
+        features_training_data = training_data.drop(columns="trip_total")
+        features_new_data = extract_features(new_data)
 
-    features_training_data = training_data.drop(columns="trip_total")
-    features_new_data = extract_features(new_data)
+        target_training_data = extract_target(training_data)
+        target_new_data = extract_target(new_data)
 
-    target_training_data = extract_target(training_data)
-    target_new_data = extract_target(new_data)
+        champion_data = new_data[new_data["model_type"] == "champion"]
 
-    champion_performance_metrics = run_performance_analysis(champion_data)
-    challenger_performance_metrics = run_performance_analysis(challenger_data)
+        champion_performance_metrics = run_performance_analysis(champion_data)
 
-    # Run data drift analysis
-    report_dict_data = run_data_drift_analysis(features_training_data, features_new_data)
-    report_dict_target = run_target_drift_analysis(target_training_data, target_new_data)
 
-    if challenger_data.empty:
-        publish(champion_performance_metrics, challenger_performance_metrics, report_dict_data, report_dict_target)
+        data_drift_report_champion = run_data_drift_analysis(features_training_data, features_new_data)
+        target_drift_champion = run_target_drift_analysis(target_training_data, target_new_data)
+
+        publish(champion_performance_metrics, data_drift_report_champion, target_drift_champion)
     else:
-        save_to_bigquery(challenger_performance_metrics, champion_performance_metrics, report_dict_data, report_dict_target)
+        training_data_challenger = get_training_data(client, PROJECT_ID, DATASET_NAME, challenger_run_id)
+        training_data_champion = get_training_data(client, PROJECT_ID, DATASET_NAME, champion_run_id)
+
+        features_training_data_challenger = training_data_challenger.drop(columns="trip_total")
+        features_training_data_champion = training_data_champion.drop(columns="trip_total")
+        features_new_data = extract_features(new_data)
+
+        target_training_data_challenger = extract_target(training_data_challenger)
+        target_training_data_champion = extract_target(training_data_champion)
+        target_new_data = extract_target(new_data)
+
+        champion_data = new_data[new_data["model_type"] == "champion"]
+        challenger_data = new_data[new_data["model_type"] == "challenger"]
+
+        champion_performance_metrics = run_performance_analysis(champion_data)
+        challenger_performance_metrics = run_performance_analysis(challenger_data)
+
+        data_drift_report_champion = run_data_drift_analysis(features_training_data_champion, features_new_data)
+        data_drift_report_challenger = run_data_drift_analysis(features_training_data_challenger, features_new_data)
+
+        target_drift_champion = run_target_drift_analysis(target_training_data_champion, target_new_data)
+        target_drift_challenger = run_target_drift_analysis(target_training_data_challenger, target_new_data)
+
+        check_drift(target_drift_champion, data_drift_report_champion, "Champion")
+        check_drift(target_drift_challenger, data_drift_report_challenger, "Challenger")
+
         compare_performance_analysis(challenger_performance_metrics, champion_performance_metrics)
+
+        save_to_bigquery(data_drift_report_champion, data_drift_report_challenger, target_drift_champion,
+                         target_drift_challenger, champion_performance_metrics, challenger_performance_metrics,
+                         "False")
 
     return 'Triggered successfully', 200
 
 
-def publish(champion_performance_metrics, challenger_performance_metrics, report_dict_data, report_dict_target):
+def publish(data_drift_report_champion, target_drift_champion,
+                      performance_metrics_champion):
 
     # publishing logic
     # if bad metrics, send pub/sub message to trigger new build
+    # if drift, send email alert
     # else, store data simply in bigquery
+    check_drift(data_drift_report_champion, target_drift_champion, "Champion")
 
-    retrain = False
-    if champion_performance_metrics["RMSE_standardized_by_mean"] > 0.3 or champion_performance_metrics["R2"] <= 0.8:
-        retrain = True
+    if performance_metrics_champion["RMSE_standardized_by_mean"] > 0.3 or performance_metrics_champion["R2"] <= 0.8:
+        message_data = {
+            "timestamp": datetime.utcnow().isoformat(),  # Current timestamp
+            "data_drift_report_champion": json.dumps(data_drift_report_champion, indent=2, cls=NumpyTypeEncoder),
+            "data_drift_report_challenger": json.dumps({}),
+            "target_drift_champion": json.dumps(target_drift_champion, indent=2, cls=NumpyTypeEncoder),
+            "target_drift_challenger": json.dumps({}),
+            "performance_metrics_champion": json.dumps(performance_metrics_champion, indent=2, cls=NumpyTypeEncoder),
+            "performance_metrics_challenger": json.dumps({}),
+            "retrain": "True",
+        }
 
-    message_data = {
-        "timestamp": datetime.utcnow().isoformat(),  # Current timestamp in ISO 8601 format
-        "data_drift_report": json.dumps(report_dict_data, indent=2, cls=NumpyTypeEncoder),
-        "target_drift_report": json.dumps(report_dict_target, indent=2, cls=NumpyTypeEncoder),
-        "performance_metrics_champion":json.dumps(champion_performance_metrics, indent=2, cls=NumpyTypeEncoder),
-        "performance_metrics_challenger":json.dumps(challenger_performance_metrics, indent=2, cls=NumpyTypeEncoder),
-        "retrain": retrain,
-    }
-
-    if retrain:
         publisher = pubsub_v1.PublisherClient()
         topic_path = publisher.topic_path(PROJECT_ID, "monitoring_retrain")
 
@@ -529,7 +598,8 @@ def publish(champion_performance_metrics, challenger_performance_metrics, report
         future.result()
         return
 
-    save_to_bigquery(champion_performance_metrics, challenger_performance_metrics, report_dict_data, report_dict_target)
+    save_to_bigquery(data_drift_report_champion, {}, target_drift_champion,
+     {}, performance_metrics_champion, {}, "False")
     return
 
 
