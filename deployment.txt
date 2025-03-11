@@ -1,5 +1,5 @@
 gcloud functions deploy data_drift_analysis `
-     --runtime python311 `
+     --runtime python312 `
      --set-env-vars=SENDGRID_API_KEY="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" `
      --trigger-http `
      --allow-unauthenticated `

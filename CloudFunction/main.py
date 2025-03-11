@@ -15,7 +15,6 @@ from sendgrid.helpers.mail import Mail
 import mlflow
 from mlflow import MlflowClient
 
-
 PROJECT_ID = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
 REGION = os.getenv("REGION", "us-west1")
 DATASET_NAME = os.getenv("DATASET_NAME", "chicago_taxi")
@@ -216,6 +215,10 @@ def roll_back_challenger(revision):
     if not revision:
         print("⚠️ No Champion revision found. Cannot promote.")
         return
+    try:
+        update_mlflow_registry_for_demote_challenger()
+    except Exception as e:
+        print(e)
     update_cloud_run_traffic(revision)
 
 
@@ -237,8 +240,19 @@ def get_model_run_ids():
 
     return challenger_run_id, champion_run_id
 
-def update_mlflow_registry_for_challenger():
 
+def update_mlflow_registry_for_demote_challenger():
+    TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
+    mlflow.set_tracking_uri(TRACKING_URI)
+    client = MlflowClient()
+    challenger = client.get_model_version_by_alias("xgb_pipeline_taxi_regressor", "challenger")
+    challenger_version = challenger.version
+    client.set_model_version_tag("xgb_pipeline_taxi_regressor", challenger_version, "challenger_status", "demoted")
+    # client.set_registered_model_alias("xgb_pipeline_taxi_regressor", "champion", challenger_version)
+    client.delete_registered_model_alias("xgb_pipeline_taxi_regressor", "challenger")
+
+
+def update_mlflow_registry_for_promote_challenger():
     TRACKING_URI = "https://mlflow-service-974726646619.us-central1.run.app"
     mlflow.set_tracking_uri(TRACKING_URI)
     client = MlflowClient()
@@ -246,6 +260,7 @@ def update_mlflow_registry_for_challenger():
     challenger_version = challenger.version
     client.set_registered_model_alias("xgb_pipeline_taxi_regressor", "champion", challenger_version)
     client.delete_registered_model_alias("xgb_pipeline_taxi_regressor", "challenger")
+
 
 def promote_challenger():
     """Redeploy Cloud Run service with a new revision and direct 100% traffic to it."""
@@ -255,7 +270,7 @@ def promote_challenger():
     new_env_var_value = "champion"
 
     try:
-        update_mlflow_registry_for_challenger()
+        update_mlflow_registry_for_promote_challenger()
     except Exception as e:
         print(f" Failed to change model in MLflow Model Registry.")
 
@@ -308,23 +323,33 @@ def promote_challenger():
     except Exception as e:
         print(f"❌ Failed to redeploy Cloud Run: {e}")
 
+
 def compare_performance_analysis(challenger_performance_metrics, champion_performance_metrics):
     """Compare model performance and update Cloud Run traffic if necessary."""
 
-    # Fetch revisions before making decisions
+    print("🔍 Fetching Cloud Run revisions...")
     champion, challenger = get_cloud_run_revisions()
 
     if not champion or not challenger:
         print("⚠️ Either Challenger or Champion revision is missing. Aborting traffic update.")
         return
 
-    challenger_rmse = challenger_performance_metrics["RMSE_standardized_by_mean"]
-    champion_rmse = champion_performance_metrics["RMSE_standardized_by_mean"]
-    challenger_r2 = challenger_performance_metrics["R2"]
-    champion_r2 = champion_performance_metrics["R2"]
+    try:
+        challenger_rmse = challenger_performance_metrics["RMSE_standardized_by_mean"]
+        champion_rmse = champion_performance_metrics["RMSE_standardized_by_mean"]
+        challenger_r2 = challenger_performance_metrics["R2"]
+        champion_r2 = champion_performance_metrics["R2"]
+    except KeyError as e:
+        print(f"❌ Missing performance metric: {e}. Cannot proceed with comparison.")
+        return
 
-    # Case 1: Both models underperform -> Trigger manual retraining/response from responsible person
+    print(f"📊 Model Performance Metrics:")
+    print(f"   - Challenger RMSE: {challenger_rmse:.4f}, R²: {challenger_r2:.4f}")
+    print(f"   - Champion RMSE: {champion_rmse:.4f}, R²: {champion_r2:.4f}")
+
+    # Case 1: Both models underperform -> Trigger manual retraining/response
     if (challenger_r2 < 0.7 and champion_r2 < 0.7) or (challenger_rmse > 0.3 and champion_rmse > 0.3):
+        print("🚨 ALERT: Both models are underperforming. Sending notification for manual intervention.")
         send_email_alert(
             "🚨 Both Deployed Models Are Underperforming! 🚨",
             f"""
@@ -349,19 +374,20 @@ def compare_performance_analysis(challenger_performance_metrics, champion_perfor
 
     # Case 2: Challenger Performs Worse -> Rollback to Champion
     if challenger_rmse > champion_rmse and challenger_r2 < champion_r2:
-        print(f"⚠️ Challenger ({challenger}) underperforms compared to Champion ({champion}). Rolling back.")
+        print(f"⚠️ Challenger ({challenger}) underperforms compared to Champion ({champion}). Initiating rollback...")
         roll_back_challenger(champion)
+        print(f"✅ Rollback to Champion ({champion}) completed.")
         return
 
     # Case 3: Challenger Performs Better -> Promote Challenger
     if challenger_rmse < champion_rmse and challenger_r2 > champion_r2:
-        print(f"🚀 Challenger ({challenger}) outperforms Champion ({champion}). Promoting to 100% traffic.")
+        print(f"🚀 Challenger ({challenger}) outperforms Champion ({champion}). Promoting to 100% traffic...")
         promote_challenger()
+        print("✅ Challenger successfully promoted.")
         return
 
     # Case 4: Performance is Similar -> No Immediate Change
-    # What are the odds of that?
-    print("INFO: Challenger model performs similarly to Champion. No update needed.")
+    print("ℹ️ INFO: Challenger model performs similarly to Champion. No update needed.")
     send_email_alert(
         "Challenger Performance Similar to Champion",
         f"""
@@ -377,6 +403,7 @@ def compare_performance_analysis(challenger_performance_metrics, champion_perfor
         <p>Consider additional evaluation before deciding on deployment.</p>
         """
     )
+
 
 def update_cloud_run_traffic(revision):
     """Update Cloud Run to direct 100% of traffic to the given revision."""
@@ -413,13 +440,20 @@ def update_cloud_run_traffic(revision):
 
     # redeploy challenger revision with new environment variable
 
+
 def data_drift_detected(data_drift_report):
-    if data_drift_report["metrics"][0]["result"]["dataset_drift"] is True:
-        return True
+    try:
+        return data_drift_report["metrics"][0]["result"]["dataset_drift"] is True
+    except (KeyError, IndexError, TypeError):
+        return False  # Default to False if the structure is incorrect
+
 
 def target_drift_detected(target_drift_report):
-    if target_drift_report["metrics"][0]["result"]["drift_detected"] is True:
-        return True
+    try:
+        return target_drift_report["metrics"][0]["result"]["drift_detected"] is True
+    except (KeyError, IndexError, TypeError):
+        return False  # Default to False if the structure is incorrect
+
 
 def check_drift(report_target, report_data, model_type):
     alerts = []
@@ -436,6 +470,7 @@ def check_drift(report_target, report_data, model_type):
             <p>{' '.join(alerts)}</p>
             """
         )
+
 
 def send_email_alert(subject, message):
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")  # Fetch from environment variables
@@ -477,7 +512,6 @@ def save_to_bigquery(data_drift_report_champion, data_drift_report_challenger, t
     TABLE_NAME = "monitoring_job"
     table_id = f"{PROJECT_ID}.{DATASET_NAME}.{TABLE_NAME}"
 
-
     # Create the row to insert
     message_data = {
         "timestamp": datetime.utcnow().isoformat(),  # Current timestamp
@@ -505,8 +539,42 @@ def save_to_bigquery(data_drift_report_champion, data_drift_report_challenger, t
     except Exception as e:
         print(f"❌ Error inserting data into BigQuery: {e}")
 
-def process_event():
 
+def publish(data_drift_report_champion, target_drift_champion,
+            performance_metrics_champion):
+    # publishing logic
+    # if bad metrics, send pub/sub message to trigger new build
+    # if drift, send email alert
+    # else, store data simply in bigquery
+    check_drift(data_drift_report_champion, target_drift_champion, "Champion")
+
+    if performance_metrics_champion["RMSE_standardized_by_mean"] > 0.3 or performance_metrics_champion["R2"] <= 0.8:
+        message_data = {
+            "timestamp": datetime.utcnow().isoformat(),  # Current timestamp
+            "data_drift_report_champion": json.dumps(data_drift_report_champion, indent=2, cls=NumpyTypeEncoder),
+            "data_drift_report_challenger": json.dumps({}),
+            "target_drift_champion": json.dumps(target_drift_champion, indent=2, cls=NumpyTypeEncoder),
+            "target_drift_challenger": json.dumps({}),
+            "performance_metrics_champion": json.dumps(performance_metrics_champion, indent=2, cls=NumpyTypeEncoder),
+            "performance_metrics_challenger": json.dumps({}),
+            "retrain": "True",
+        }
+
+        publisher = pubsub_v1.PublisherClient()
+        topic_path = publisher.topic_path(PROJECT_ID, "monitoring_retrain")
+
+        message_bytes = json.dumps(message_data).encode("utf-8")
+        future = publisher.publish(topic_path, message_bytes)
+        future.result()
+        return
+
+    save_to_bigquery(data_drift_report_champion, {}, target_drift_champion,
+                     {}, performance_metrics_champion, {}, "False")
+    return
+
+
+
+def process_event():
     challenger_run_id, champion_run_id = get_model_run_ids()
     client = initialize_bigquery_client()
     new_data = get_new_data(client, PROJECT_ID, DATASET_NAME)
@@ -526,13 +594,12 @@ def process_event():
 
         champion_data = new_data[new_data["model_type"] == "champion"]
 
-        champion_performance_metrics = run_performance_analysis(champion_data)
-
+        performance_metrics_champion = run_performance_analysis(champion_data)
 
         data_drift_report_champion = run_data_drift_analysis(features_training_data, features_new_data)
         target_drift_champion = run_target_drift_analysis(target_training_data, target_new_data)
 
-        publish(champion_performance_metrics, data_drift_report_champion, target_drift_champion)
+        publish(data_drift_report_champion, target_drift_champion, performance_metrics_champion)
     else:
         training_data_challenger = get_training_data(client, PROJECT_ID, DATASET_NAME, challenger_run_id)
         training_data_champion = get_training_data(client, PROJECT_ID, DATASET_NAME, champion_run_id)
@@ -567,39 +634,5 @@ def process_event():
                          "False")
 
     return 'Triggered successfully', 200
-
-
-def publish(data_drift_report_champion, target_drift_champion,
-                      performance_metrics_champion):
-
-    # publishing logic
-    # if bad metrics, send pub/sub message to trigger new build
-    # if drift, send email alert
-    # else, store data simply in bigquery
-    check_drift(data_drift_report_champion, target_drift_champion, "Champion")
-
-    if performance_metrics_champion["RMSE_standardized_by_mean"] > 0.3 or performance_metrics_champion["R2"] <= 0.8:
-        message_data = {
-            "timestamp": datetime.utcnow().isoformat(),  # Current timestamp
-            "data_drift_report_champion": json.dumps(data_drift_report_champion, indent=2, cls=NumpyTypeEncoder),
-            "data_drift_report_challenger": json.dumps({}),
-            "target_drift_champion": json.dumps(target_drift_champion, indent=2, cls=NumpyTypeEncoder),
-            "target_drift_challenger": json.dumps({}),
-            "performance_metrics_champion": json.dumps(performance_metrics_champion, indent=2, cls=NumpyTypeEncoder),
-            "performance_metrics_challenger": json.dumps({}),
-            "retrain": "True",
-        }
-
-        publisher = pubsub_v1.PublisherClient()
-        topic_path = publisher.topic_path(PROJECT_ID, "monitoring_retrain")
-
-        message_bytes = json.dumps(message_data).encode("utf-8")
-        future = publisher.publish(topic_path, message_bytes)
-        future.result()
-        return
-
-    save_to_bigquery(data_drift_report_champion, {}, target_drift_champion,
-     {}, performance_metrics_champion, {}, "False")
-    return
 
 
