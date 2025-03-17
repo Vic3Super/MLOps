@@ -26,9 +26,11 @@ trip_features = FeatureView(
         Field(name="trip_start_timestamp", dtype=UnixTimestamp),
         Field(name="extras", dtype=Float32),
         Field(name="tolls", dtype=Float32),
+        Field(name="tips", dtype=Float32),
         Field(name="pickup_latitude", dtype=Float32),
         Field(name="pickup_longitude", dtype=Float32),
         Field(name="pickup_community_area", dtype=Float32),
+        Field(name="taxi_id", dtype=String),
     ],
     source=trip_source,
 )
@@ -58,5 +60,5 @@ driver_features = FeatureView(
 
 taxi_drive_fs = FeatureService(
     name="taxi_drive",
-    features=[trip_features, driver_features]
+    features=[trip_features]
 )

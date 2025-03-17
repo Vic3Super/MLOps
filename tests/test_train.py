@@ -155,6 +155,13 @@ def test_train_pipeline_with_full_pipeline(sample_data):
     except Exception as e:
         assert "Found unknown categories" not in str(e), "Pipeline is failing on unseen categorical values"
 
+    increased_data = X_test.copy()
+    increased_data["trip_miles"] = increased_data["trip_miles"] * 4
+
+    increased_predictions = trained_pipeline.predict(increased_data)
+    # Ensure that each element in increased_predictions is greater than the corresponding element in predictions
+    assert np.all(increased_predictions > predictions), \
+        f"Some predictions did not increase as expected. Min diff: {np.min(increased_predictions - predictions)}"
 
     # Test MR4
     # Apply perturbation
@@ -169,4 +176,8 @@ def test_train_pipeline_with_full_pipeline(sample_data):
     # Assert that predictions remain stable
     correlation = np.corrcoef(predictions, predictions_perturbed)[0, 1]
     assert correlation > 0.99, f"Prediction correlation too low: {correlation}"
+
+    # Assert that predictions remain stable within a small tolerance
+    #assert np.allclose(predictions, predictions_perturbed, atol=1e-3), \
+    #    f"Predictions differ more than expected: max difference {np.max(np.abs(predictions - predictions_perturbed))}"
 

@@ -19,7 +19,7 @@ def test_extract_data_success():
         "trip_start_timestamp":["2023-07-06 16:45:00+00:00", "2023-09-18 18:15:00+00:00", "2023-08-22 17:00:00+00:00", None],
         "extras":[0, 1, 2, None],
         "tolls":[3,4,5, None],
-        "avg_tips":[0.0, 0.9, 3.4, None],
+        "tips":[0.5,0.3,1, None],
         "pickup_community_area": [12, 14, 17, None],
         "pickup_latitude": [13.8, 14.56, 17.98, None],
         "pickup_longitude": [13.8, 14.56, 17.98, None],
@@ -30,7 +30,6 @@ def test_extract_data_success():
 
     assert cleaned_df is not None
     assert len(cleaned_df.columns) > len(raw_data.columns)
-    #assert cleaned_df.isna().sum().sum() == 0
     assert "unique_key" not in cleaned_df.columns  # Dropped column
     assert "taxi_id" not in cleaned_df.columns  # Dropped column
     assert "event_timestamp" not in cleaned_df.columns  # Dropped column
@@ -73,7 +72,7 @@ def test_extract_data_empty_after_cleaning():
         "trip_start_timestamp":["2023-07-06 16:45:00+00:00", "2023-09-18 18:15:00+00:00", "2023-08-22 17:00:00+00:00"],
         "extras":[0, 1, 2],
         "tolls":[3,4,5],
-        "avg_tips":[0.0, 0.9, 3.4],
+        "tips": [0.5, 0.3, 1],
         "pickup_community_area": [12, 14, 17],
         "pickup_latitude": [13.8, 14.56, 17.98],
         "pickup_longitude": [13.8, 14.56, 17.98],
@@ -106,7 +105,7 @@ def test_extract_data_outliers():
         ],
         "extras": [0, 1, 2, 1, 0, 2],
         "tolls": [2, 3, 5, 4, 3, 6],
-        "avg_tips": [1.0, 2.0, 3.5, 1.5, 0.8, 4.0],
+        "tips": [0.5, 0.3, 1, 1, 3, 0],
         "pickup_community_area": [12, 14, 17, 12, 15, 18],
         "pickup_latitude": [13.8, 14.56, 17.98, 12.8, 15.7, 18.9],
         "pickup_longitude": [13.8, 14.56, 17.98, 12.8, 15.7, 18.9],
@@ -134,7 +133,7 @@ def test_extract_data_output_columns():
         "trip_start_timestamp":["2023-07-06 16:45:00+00:00", "2023-09-18 18:15:00+00:00", "2023-08-22 17:00:00+00:00"],
         "extras":[0, 1, 2],
         "tolls":[3,4,5],
-        "avg_tips":[0.0, 0.9, 3.4],
+        "tips": [0.5, 0.3, 1],
         "pickup_community_area": [12, 14, 17],
         "pickup_latitude": [13.8, 14.56, 17.98],
         "pickup_longitude": [13.8, 14.56, 17.98],

@@ -33,7 +33,7 @@ def extract_data(data: pd.DataFrame) -> pd.DataFrame:
     required_columns = {
         'unique_key', 'taxi_id', 'event_timestamp',
         'trip_miles', 'payment_type', 'trip_total', 'company',
-        'trip_start_timestamp', 'extras', 'tolls', 'avg_tips',
+        'trip_start_timestamp', 'extras', 'tolls',
         "pickup_latitude", "pickup_longitude", "pickup_community_area"
     }
 
@@ -43,23 +43,17 @@ def extract_data(data: pd.DataFrame) -> pd.DataFrame:
         raise KeyError(f"Missing required columns: {missing_columns}")
 
     logger.info("Dropping unnecessary columns and handling missing values.")
-    df = data.drop(columns=["unique_key", "taxi_id", "event_timestamp"], errors="ignore")
+    df = data.drop(columns=["taxi_id", "event_timestamp"], errors="ignore")
 
 
     size_before_removing_zero_entries = len(df)
-    # Remove zero or negative values
-    df = df[(df["trip_miles"] > 0) & (df["trip_total"] > 0)]
+    # Remove zero or negative values and trips with improbably price for their distance
+    df = df[(df["trip_miles"] > 0) & (df["trip_total"] > 0) & (df["trip_miles"] < df["trip_total"])]
     removed = size_before_removing_zero_entries - len(df)
-    logger.info(f"Removed {removed} zero entries from columns trip_miles, trip_total .")
+    logger.info(f"Removed {removed} zero or improbable entries from columns trip_miles, trip_total.")
 
-    # Drop empty rows
 
-    '''
-    size_before_dropna = len(df)
-    df.dropna(inplace=True)
-    removed = size_before_dropna - len(df)
-    logger.info(f"Removed {removed} entries for containing NaN values.")
-    '''
+
     if df.empty:
         logger.error("DataFrame is empty after initial cleaning. No valid data to process.")
         raise ValueError("DataFrame is empty after cleaning. No valid data to process.")
@@ -76,8 +70,11 @@ def extract_data(data: pd.DataFrame) -> pd.DataFrame:
     df['day_of_month'] = df['trip_start_timestamp'].dt.day
     df.drop(columns=["trip_start_timestamp"], inplace=True)
 
+    df["avg_tips"] = df.groupby("unique_key")["tips"].transform("mean")
+    df.drop(columns=["tips", "unique_key"], inplace=True)
     # Outlier removal
     df = remove_outliers(df)
+
 
     if df.empty:
         logger.error("All data was removed after outlier cleaning. No valid data to process.")

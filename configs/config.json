@@ -4,5 +4,5 @@
     "REGION": "us-west1",
     "RUN_ID": "gs://mlflow-bucket-1998/mlruns/2/5f0e2a3799bf49dcbd65f6fb43f63c2d",
     "TEST_RUN": "False",
-    "TRAINING_SIZE": 150000
+    "TRAINING_SIZE": 200000
 }

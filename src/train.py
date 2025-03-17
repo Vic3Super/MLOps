@@ -31,7 +31,7 @@ def create_pipeline() -> Pipeline:
         transformers=[
             ("num", Pipeline([
                 ("imputer", SimpleImputer(strategy="mean")),
-                ("scaler", RobustScaler())
+                ("scaler", StandardScaler())
             ]), numerical_cols),
             ("cat", Pipeline([
                 ("imputer", SimpleImputer(strategy="most_frequent")),
