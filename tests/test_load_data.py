@@ -6,12 +6,6 @@ from src.load_data import load_data_from_feature_store
 import pandas as pd
 
 
-# Force authentication in tests
-#GCP_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
-"""if not GCP_CREDENTIALS or not os.path.exists(GCP_CREDENTIALS):
-    raise RuntimeError(f"Missing Google Cloud credentials: {GCP_CREDENTIALS}")
-"""
 
 
 @patch("src.load_data.FeatureStore")
@@ -30,7 +24,6 @@ def test_load_data_from_feature_store_success(mock_feature_store):
     # Mock historical features return value
     sample_df = pd.DataFrame({
         "unique_key": [1, 2, 3],
-        "taxi_id": [101, 102, 103],
         "event_timestamp": ["2023-01-01", "2023-01-02", "2023-01-03"],
     })
     mock_store.get_historical_features.return_value.to_df.return_value = sample_df

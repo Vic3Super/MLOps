@@ -155,8 +155,6 @@ def test_train_pipeline_with_full_pipeline(sample_data):
     except Exception as e:
         assert "Found unknown categories" not in str(e), "Pipeline is failing on unseen categorical values"
 
-
-    # Test MR4
     # Apply perturbation
     perturbed_data = data.copy()
     for col in numerical_cols:
@@ -169,4 +167,5 @@ def test_train_pipeline_with_full_pipeline(sample_data):
     # Assert that predictions remain stable
     correlation = np.corrcoef(predictions, predictions_perturbed)[0, 1]
     assert correlation > 0.99, f"Prediction correlation too low: {correlation}"
+
 

@@ -52,7 +52,6 @@ def load_data_from_feature_store(size=100000):
     entity_sql = f"""
         SELECT
             unique_key,
-            taxi_id,
             timestamp AS event_timestamp
         FROM {data_table} 
         ORDER BY timestamp DESC
