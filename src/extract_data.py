@@ -4,7 +4,7 @@ import os
 from google.cloud import bigquery
 import pandas as pd
 
-# Get the global logger (inherits from main.py)
+
 logger = logging.getLogger(__name__)
 
 
@@ -143,7 +143,6 @@ def upload_training_data_to_bigquery(cleaned_df: pd.DataFrame, model_run_id: str
 
     client = bigquery.Client()
 
-    # Step 2: Add a "status" column with "ACTIVE" to the new data
     cleaned_df["model_run_id"] = model_run_id
 
     # Configure job to append new rows

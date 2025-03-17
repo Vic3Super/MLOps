@@ -213,7 +213,7 @@ def get_cloud_run_revisions():
 def roll_back_challenger(revision):
     """Promote the champion model back to 100% traffic."""
     if not revision:
-        print("⚠️ No Champion revision found. Cannot promote.")
+        print("No Champion revision found. Cannot promote.")
         return
     try:
         update_mlflow_registry_for_demote_challenger()
@@ -278,7 +278,7 @@ def promote_challenger():
     try:
         service = client.get_service(name=service_path)
     except Exception as e:
-        print(f"❌ Failed to fetch Cloud Run service: {e}")
+        print(f"Failed to fetch Cloud Run service: {e}")
         return
 
     # Modify environment variables
@@ -300,7 +300,7 @@ def promote_challenger():
         # Get the latest revision name
         latest_revision_path = updated_service.latest_ready_revision
         if not latest_revision_path:
-            print("❌ Failed to fetch latest revision.")
+            print("Failed to fetch latest revision.")
             return
 
         print(f"✅ New revision {latest_revision_path} deployed.")
@@ -321,17 +321,17 @@ def promote_challenger():
         print(f"✅ Successfully shifted 100% traffic to {latest_revision}")
 
     except Exception as e:
-        print(f"❌ Failed to redeploy Cloud Run: {e}")
+        print(f"Failed to redeploy Cloud Run: {e}")
 
 
 def compare_performance_analysis(challenger_performance_metrics, champion_performance_metrics):
     """Compare model performance and update Cloud Run traffic if necessary."""
 
-    print("🔍 Fetching Cloud Run revisions...")
+    print("Fetching Cloud Run revisions...")
     champion, challenger = get_cloud_run_revisions()
 
     if not champion or not challenger:
-        print("⚠️ Either Challenger or Champion revision is missing. Aborting traffic update.")
+        print("Either Challenger or Champion revision is missing. Aborting traffic update.")
         return
 
     try:
@@ -340,18 +340,18 @@ def compare_performance_analysis(challenger_performance_metrics, champion_perfor
         challenger_r2 = challenger_performance_metrics["R2"]
         champion_r2 = champion_performance_metrics["R2"]
     except KeyError as e:
-        print(f"❌ Missing performance metric: {e}. Cannot proceed with comparison.")
+        print(f"Missing performance metric: {e}. Cannot proceed with comparison.")
         return
 
-    print(f"📊 Model Performance Metrics:")
+    print(f"Model Performance Metrics:")
     print(f"   - Challenger RMSE: {challenger_rmse:.4f}, R²: {challenger_r2:.4f}")
     print(f"   - Champion RMSE: {champion_rmse:.4f}, R²: {champion_r2:.4f}")
 
     # Case 1: Both models underperform -> Trigger manual retraining/response
     if (challenger_r2 < 0.7 and champion_r2 < 0.7) or (challenger_rmse > 0.3 and champion_rmse > 0.3):
-        print("🚨 ALERT: Both models are underperforming. Sending notification for manual intervention.")
+        print("ALERT: Both models are underperforming. Sending notification for manual intervention.")
         send_email_alert(
-            "🚨 Both Deployed Models Are Underperforming! 🚨",
+            "Both Deployed Models Are Underperforming!",
             f"""
             <h3>Urgent: Both Models Are Failing</h3>
             <p>Both the Champion and Challenger models are performing below acceptable thresholds.</p>
@@ -374,20 +374,20 @@ def compare_performance_analysis(challenger_performance_metrics, champion_perfor
 
     # Case 2: Challenger Performs Worse -> Rollback to Champion
     if challenger_rmse > champion_rmse and challenger_r2 < champion_r2:
-        print(f"⚠️ Challenger ({challenger}) underperforms compared to Champion ({champion}). Initiating rollback...")
+        print(f"Challenger ({challenger}) underperforms compared to Champion ({champion}). Initiating rollback...")
         roll_back_challenger(champion)
-        print(f"✅ Rollback to Champion ({champion}) completed.")
+        print(f"Rollback to Champion ({champion}) completed.")
         return
 
     # Case 3: Challenger Performs Better -> Promote Challenger
     if challenger_rmse < champion_rmse and challenger_r2 > champion_r2:
-        print(f"🚀 Challenger ({challenger}) outperforms Champion ({champion}). Promoting to 100% traffic...")
+        print(f"Challenger ({challenger}) outperforms Champion ({champion}). Promoting to 100% traffic...")
         promote_challenger()
-        print("✅ Challenger successfully promoted.")
+        print("Challenger successfully promoted.")
         return
 
     # Case 4: Performance is Similar -> No Immediate Change
-    print("ℹ️ INFO: Challenger model performs similarly to Champion. No update needed.")
+    print("INFO: Challenger model performs similarly to Champion. No update needed.")
     send_email_alert(
         "Challenger Performance Similar to Champion",
         f"""
@@ -414,11 +414,11 @@ def update_cloud_run_traffic(revision):
     try:
         service = client.get_service(name=service_path)
     except Exception as e:
-        print(f"❌ Failed to fetch Cloud Run service: {e}")
+        print(f"Failed to fetch Cloud Run service: {e}")
         return
 
     if not service.traffic:
-        print("⚠️ No existing traffic settings found. Cannot update traffic.")
+        print("No existing traffic settings found. Cannot update traffic.")
         return
 
     # Update traffic allocation to a specific revision
@@ -434,9 +434,9 @@ def update_cloud_run_traffic(revision):
     try:
         operation = client.update_service(service=service)
         operation.result()  # Wait for operation to complete
-        print(f"✅ Successfully shifted 100% traffic to {revision}")
+        print(f"Successfully shifted 100% traffic to {revision}")
     except Exception as e:
-        print(f"❌ Failed to update traffic: {e}")
+        print(f"Failed to update traffic: {e}")
 
     # redeploy challenger revision with new environment variable
 
