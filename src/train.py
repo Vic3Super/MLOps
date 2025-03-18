@@ -54,7 +54,7 @@ def create_pipeline() -> Pipeline:
         learning_rate=0.1,
         max_depth=4,
         random_state=42,
-        objective="reg:squarederror"
+        objective="reg:squaredlogerror"
     )
 
     # Create final pipeline

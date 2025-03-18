@@ -14,12 +14,17 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 import mlflow
 from mlflow import MlflowClient
+import logging
+
 
 PROJECT_ID = os.getenv("PROJECT_ID", "carbon-relic-439014-t0")
 REGION = os.getenv("REGION", "us-west1")
 DATASET_NAME = os.getenv("DATASET_NAME", "chicago_taxi")
 SERVICE_NAME = os.getenv("SERVICE_NAME", "my-mlflow-app")
 
+
+
+logging.basicConfig(level=logging.INFO)
 
 class NumpyTypeEncoder(json.JSONEncoder):
     # whacky https://gist.github.com/jonathanlurie/1b8d12f938b400e54c1ed8de21269b65
@@ -213,7 +218,7 @@ def get_cloud_run_revisions():
 def roll_back_challenger(revision):
     """Promote the champion model back to 100% traffic."""
     if not revision:
-        print("No Champion revision found. Cannot promote.")
+        logging.warning("No Champion revision found. Cannot promote.")
         return
     try:
         update_mlflow_registry_for_demote_challenger()
@@ -272,13 +277,13 @@ def promote_challenger():
     try:
         update_mlflow_registry_for_promote_challenger()
     except Exception as e:
-        print(f" Failed to change model in MLflow Model Registry.")
+        logging.warning(f"Failed to change model in MLflow Model Registry.")
 
     # Get existing service configuration
     try:
         service = client.get_service(name=service_path)
     except Exception as e:
-        print(f"Failed to fetch Cloud Run service: {e}")
+        logging.warning(f"Failed to fetch Cloud Run service: {e}")
         return
 
     # Modify environment variables
@@ -300,10 +305,10 @@ def promote_challenger():
         # Get the latest revision name
         latest_revision_path = updated_service.latest_ready_revision
         if not latest_revision_path:
-            print("Failed to fetch latest revision.")
+            logging.warning("Failed to fetch latest revision.")
             return
 
-        print(f"✅ New revision {latest_revision_path} deployed.")
+        logging.info(f"New revision {latest_revision_path} deployed.")
         latest_revision = latest_revision_path.split("/")[-1]  # Extract just the revision name
 
         # Now, shift 100% traffic to the new revision
@@ -318,16 +323,16 @@ def promote_challenger():
         operation = client.update_service(service=updated_service)
         operation.result()  # Wait for the update to complete
 
-        print(f"✅ Successfully shifted 100% traffic to {latest_revision}")
+        logging.info(f"Successfully shifted 100% traffic to {latest_revision}")
 
     except Exception as e:
-        print(f"Failed to redeploy Cloud Run: {e}")
+        logging.warning(f"Failed to redeploy Cloud Run: {e}")
 
 
 def compare_performance_analysis(challenger_performance_metrics, champion_performance_metrics):
     """Compare model performance and update Cloud Run traffic if necessary."""
 
-    print("Fetching Cloud Run revisions...")
+    logging.info("Fetching Cloud Run revisions...")
     champion, challenger = get_cloud_run_revisions()
 
     if not champion or not challenger:
@@ -340,16 +345,16 @@ def compare_performance_analysis(challenger_performance_metrics, champion_perfor
         challenger_r2 = challenger_performance_metrics["R2"]
         champion_r2 = champion_performance_metrics["R2"]
     except KeyError as e:
-        print(f"Missing performance metric: {e}. Cannot proceed with comparison.")
+        logging.info(f"Missing performance metric: {e}. Cannot proceed with comparison.")
         return
 
-    print(f"Model Performance Metrics:")
-    print(f"   - Challenger RMSE: {challenger_rmse:.4f}, R²: {challenger_r2:.4f}")
-    print(f"   - Champion RMSE: {champion_rmse:.4f}, R²: {champion_r2:.4f}")
+    logging.info(f"Model Performance Metrics:")
+    logging.info(f"   - Challenger RMSE: {challenger_rmse:.4f}, R²: {challenger_r2:.4f}")
+    logging.info(f"   - Champion RMSE: {champion_rmse:.4f}, R²: {champion_r2:.4f}")
 
     # Case 1: Both models underperform -> Trigger manual retraining/response
     if (challenger_r2 < 0.7 and champion_r2 < 0.7) or (challenger_rmse > 0.3 and champion_rmse > 0.3):
-        print("ALERT: Both models are underperforming. Sending notification for manual intervention.")
+        logging.warning("ALERT: Both models are underperforming. Sending notification for manual intervention.")
         send_email_alert(
             "Both Deployed Models Are Underperforming!",
             f"""
@@ -374,20 +379,20 @@ def compare_performance_analysis(challenger_performance_metrics, champion_perfor
 
     # Case 2: Challenger Performs Worse -> Rollback to Champion
     if challenger_rmse > champion_rmse and challenger_r2 < champion_r2:
-        print(f"Challenger ({challenger}) underperforms compared to Champion ({champion}). Initiating rollback...")
+        logging.info(f"Challenger ({challenger}) underperforms compared to Champion ({champion}). Initiating rollback...")
         roll_back_challenger(champion)
-        print(f"Rollback to Champion ({champion}) completed.")
+        logging.info(f"Rollback to Champion ({champion}) completed.")
         return
 
     # Case 3: Challenger Performs Better -> Promote Challenger
     if challenger_rmse < champion_rmse and challenger_r2 > champion_r2:
-        print(f"Challenger ({challenger}) outperforms Champion ({champion}). Promoting to 100% traffic...")
+        logging.info(f"Challenger ({challenger}) outperforms Champion ({champion}). Promoting to 100% traffic...")
         promote_challenger()
-        print("Challenger successfully promoted.")
+        logging.info("Challenger successfully promoted.")
         return
 
     # Case 4: Performance is Similar -> No Immediate Change
-    print("INFO: Challenger model performs similarly to Champion. No update needed.")
+    logging.info("INFO: Challenger model performs similarly to Champion. No update needed.")
     send_email_alert(
         "Challenger Performance Similar to Champion",
         f"""
@@ -414,11 +419,11 @@ def update_cloud_run_traffic(revision):
     try:
         service = client.get_service(name=service_path)
     except Exception as e:
-        print(f"Failed to fetch Cloud Run service: {e}")
+        logging.warning(f"Failed to fetch Cloud Run service: {e}")
         return
 
     if not service.traffic:
-        print("No existing traffic settings found. Cannot update traffic.")
+        logging.warning("No existing traffic settings found. Cannot update traffic.")
         return
 
     # Update traffic allocation to a specific revision
@@ -434,9 +439,9 @@ def update_cloud_run_traffic(revision):
     try:
         operation = client.update_service(service=service)
         operation.result()  # Wait for operation to complete
-        print(f"Successfully shifted 100% traffic to {revision}")
+        logging.info(f"Successfully shifted 100% traffic to {revision}")
     except Exception as e:
-        print(f"Failed to update traffic: {e}")
+        logging.warning(f"Failed to update traffic: {e}")
 
     # redeploy challenger revision with new environment variable
 
@@ -491,9 +496,9 @@ def send_email_alert(subject, message):
     try:
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(mail)
-        print(f"Email sent with status code {response.status_code}")
+        logging.info(f"Email sent with status code {response.status_code}")
     except Exception as e:
-        print(f"Error sending email: {e}")
+        logging.warning(f"Error sending email: {e}")
 
 
 def cloud_function_entry_point(request):
@@ -532,12 +537,12 @@ def save_to_bigquery(data_drift_report_champion, data_drift_report_challenger, t
         errors = client.insert_rows_json(table_id, rows_to_insert)
 
         if errors:
-            print(f"❌ Failed to insert rows: {errors}")
+            logging.warning(f"Failed to insert rows: {errors}")
         else:
-            print(f"✅ Successfully inserted data into {table_id}")
+            logging.info(f"Successfully inserted data into {table_id}")
 
     except Exception as e:
-        print(f"❌ Error inserting data into BigQuery: {e}")
+        logging.warning(f"❌ Error inserting data into BigQuery: {e}")
 
 
 def publish(data_drift_report_champion, target_drift_champion,
@@ -575,64 +580,105 @@ def publish(data_drift_report_champion, target_drift_champion,
 
 
 def process_event():
+    logging.info("Starting process_event execution")
+
     challenger_run_id, champion_run_id = get_model_run_ids()
+    logging.info(f"Retrieved model run IDs - Challenger: {challenger_run_id}, Champion: {champion_run_id}")
+
     client = initialize_bigquery_client()
+    logging.info("Initialized BigQuery client")
+
     new_data = get_new_data(client, PROJECT_ID, DATASET_NAME)
+    logging.info("Fetched new data for monitoring")
+
     if new_data is None or new_data.empty:
+        logging.info("No new data available for monitoring")
         return "No new data to monitor", 200
+
     new_data.dropna(subset="ground_truth", inplace=True)
+    logging.info(f"New data after dropping missing ground_truth values: {len(new_data)} rows")
 
     if challenger_run_id is None:
+        logging.info("No challenger model found. Running champion-only analysis")
+
         training_data = get_training_data(client, PROJECT_ID, DATASET_NAME, champion_run_id)
+        logging.info(f"Fetched champion training data: {len(training_data)} rows")
 
         new_data = new_data.dropna(subset=["ground_truth"])
         features_training_data = training_data.drop(columns="trip_total")
         features_new_data = extract_features(new_data)
+        logging.info("Extracted features from training and new data")
 
         target_training_data = extract_target(training_data)
         target_new_data = extract_target(new_data)
+        logging.info("Extracted targets from training and new data")
 
         champion_data = new_data[new_data["model_type"] == "champion"]
+        logging.info(f"Filtered champion data: {len(champion_data)} rows")
 
         performance_metrics_champion = run_performance_analysis(champion_data)
+        logging.info("Ran performance analysis for champion model")
 
         data_drift_report_champion = run_data_drift_analysis(features_training_data, features_new_data)
+        logging.info("Ran data drift analysis for champion model")
+
         target_drift_champion = run_target_drift_analysis(target_training_data, target_new_data)
+        logging.info("Ran target drift analysis for champion model")
 
         publish(data_drift_report_champion, target_drift_champion, performance_metrics_champion)
+        logging.info("Published monitoring results for champion model")
+
     else:
+        logging.info("Challenger model detected. Running full comparison analysis")
+
         training_data_challenger = get_training_data(client, PROJECT_ID, DATASET_NAME, challenger_run_id)
         training_data_champion = get_training_data(client, PROJECT_ID, DATASET_NAME, champion_run_id)
+        logging.info("Fetched training data for both challenger and champion models")
 
         features_training_data_challenger = training_data_challenger.drop(columns="trip_total")
         features_training_data_champion = training_data_champion.drop(columns="trip_total")
         features_new_data = extract_features(new_data)
+        logging.info("Extracted features for challenger, champion, and new data")
 
         target_training_data_challenger = extract_target(training_data_challenger)
         target_training_data_champion = extract_target(training_data_champion)
         target_new_data = extract_target(new_data)
+        logging.info("Extracted targets for challenger, champion, and new data")
 
         champion_data = new_data[new_data["model_type"] == "champion"]
         challenger_data = new_data[new_data["model_type"] == "challenger"]
+        logging.info(f"Champion data rows: {len(champion_data)}, Challenger data rows: {len(challenger_data)}")
 
         champion_performance_metrics = run_performance_analysis(champion_data)
         challenger_performance_metrics = run_performance_analysis(challenger_data)
+        logging.info("Completed performance analysis for both models")
 
         data_drift_report_champion = run_data_drift_analysis(features_training_data_champion, features_new_data)
         data_drift_report_challenger = run_data_drift_analysis(features_training_data_challenger, features_new_data)
+        logging.info("Completed data drift analysis for both models")
 
         target_drift_champion = run_target_drift_analysis(target_training_data_champion, target_new_data)
         target_drift_challenger = run_target_drift_analysis(target_training_data_challenger, target_new_data)
+        logging.info("Completed target drift analysis for both models")
 
         check_drift(target_drift_champion, data_drift_report_champion, "Champion")
         check_drift(target_drift_challenger, data_drift_report_challenger, "Challenger")
+        logging.info("Checked drift conditions for both models")
 
         compare_performance_analysis(challenger_performance_metrics, champion_performance_metrics)
+        logging.info("Compared performance metrics between challenger and champion")
 
-        save_to_bigquery(data_drift_report_champion, data_drift_report_challenger, target_drift_champion,
-                         target_drift_challenger, champion_performance_metrics, challenger_performance_metrics,
-                         "False")
+        save_to_bigquery(
+            data_drift_report_champion,
+            data_drift_report_challenger,
+            target_drift_champion,
+            target_drift_challenger,
+            champion_performance_metrics,
+            challenger_performance_metrics,
+            "False"
+        )
+        logging.info("Saved monitoring results to BigQuery")
 
+    logging.info("process_event execution completed successfully")
     return 'Triggered successfully', 200
-
 

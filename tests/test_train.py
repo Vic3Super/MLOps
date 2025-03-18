@@ -155,6 +155,13 @@ def test_train_pipeline_with_full_pipeline(sample_data):
     except Exception as e:
         assert "Found unknown categories" not in str(e), "Pipeline is failing on unseen categorical values"
 
+    increased_data = X_test.copy()
+    increased_data["extras"] = increased_data["extras"] + 20
+    increased_predictions = trained_pipeline.predict(increased_data)
+    compare = increased_predictions >= predictions
+    false_count = np.count_nonzero(compare == False)
+    assert false_count < 1
+
     # Apply perturbation
     perturbed_data = data.copy()
     for col in numerical_cols:
