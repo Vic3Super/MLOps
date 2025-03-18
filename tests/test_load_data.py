@@ -88,9 +88,7 @@ def test_empty_data_returned(mock_feature_store):
 @pytest.mark.integration
 def test_load_data_from_feature_store_integration():
     """Integration test: Ensure Feature Store query works correctly."""
-
     df = load_data_from_feature_store(size=10)
-
     assert df is not None
     assert not df.empty
     assert "unique_key" in df.columns

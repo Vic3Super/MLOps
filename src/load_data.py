@@ -24,7 +24,9 @@ def load_data_from_feature_store(size=100000):
         raise ValueError("Size must be a positive integer greater than or equal to 1")
 
     try:
-        repo_path = os.getenv("FEATURE_STORE_PATH", "src/")
+        #repo_path = os.getenv("FEATURE_STORE_PATH", "src/")
+        repo_path = os.getenv("FEATURE_STORE_PATH", ".")
+
         repo_path = os.path.abspath(repo_path)  # Ensure it's an absolute path
         logger.info(f"Using Feature Store path: {repo_path}")
 

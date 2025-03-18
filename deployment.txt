@@ -4,4 +4,4 @@ gcloud functions deploy data_drift_analysis `
      --trigger-http `
      --allow-unauthenticated `
      --entry-point cloud_function_entry_point `
-     --memory 2Gi
+     --memory 4Gi
