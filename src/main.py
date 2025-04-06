@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)  # Global logger
 
 def main():
     DATA_SIZE = int(os.getenv("TRAINING_SIZE", 100000))
-    TEST_RUN = os.getenv("TEST_RUN", "False").lower() == "false"
+    TEST_RUN = bool(os.getenv("TEST_RUN", "True"))
 
     experiment = setup_mlflow()
     run_name = datetime.now().strftime("%Y-%m-%d_%H:%M")
