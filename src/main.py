@@ -57,19 +57,21 @@ def main():
 
         with mlflow.start_run(nested=True, experiment_id=experiment.experiment_id, parent_run_id=main_run.info.run_id, tags=tags, run_name="data_load") as data_load_run:
             data = load_data_from_feature_store(size=DATA_SIZE)
+            '''
             dataset = mlflow.data.pandas_dataset.from_pandas(data)
             logger.info(dataset)
             mlflow.log_input(dataset, "loaded_data")
-
+            '''
         with mlflow.start_run(nested=True, experiment_id=experiment.experiment_id, parent_run_id=main_run.info.run_id, tags=tags, run_name="data_extract") as data_extract_run:
             data = extract_data(data)
+            '''
             dataset = mlflow.data.pandas_dataset.from_pandas(data)
             logger.info(dataset)
             mlflow.log_input(dataset, "extracted_data")
-
+            '''
 
         with mlflow.start_run(nested=True, experiment_id=experiment.experiment_id, parent_run_id=main_run.info.run_id, tags=tags, run_name="model_training") as model_training_run:
-            mlflow.log_input(dataset, "training")
+            #mlflow.log_input(dataset, "training")
             pipeline = create_pipeline()
             pipeline, metrics, X_train, y_train, X_test, y_test, params = train_pipeline(pipeline, data)
             mlflow.log_metrics(metrics)
