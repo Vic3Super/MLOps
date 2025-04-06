@@ -54,7 +54,7 @@ def validate_serving(input_example: pd.DataFrame, model_uri: str):
         raise RuntimeError(f"Model serving validation failed: {e}")
 
 
-def validate_model(candidate_model_uri: str, X_test, y_test, parent_run_id: str, experiment, model_version):
+def validate_model(candidate_model_uri: str, X_test, y_test, run_id: str, experiment, model_version):
     """
     Validates the candidate model against evaluation criteria and the last running model.
 
@@ -94,8 +94,7 @@ def validate_model(candidate_model_uri: str, X_test, y_test, parent_run_id: str,
     logger.info("Beginning MLflow evaluation process.")
 
     # Start a new validation run under the experiment
-    with mlflow.start_run(run_name="validation_run", parent_run_id=parent_run_id,
-                          experiment_id=experiment.experiment_id) as run:
+    with mlflow.start_run(run_id=run_id, nested=True) as run:
 
         def root_mean_squared_error_by_mean(eval_df, _builtin_metrics):
             """Computes RMSE standardized by mean of target values."""
