@@ -1,14 +1,16 @@
 import json
 import logging
 import os
+from typing import Tuple
+
 from google.cloud import bigquery
 import pandas as pd
-
+from pandas import DataFrame
 
 logger = logging.getLogger(__name__)
 
 
-def extract_data(data: pd.DataFrame) -> pd.DataFrame:
+def extract_data(data: pd.DataFrame) -> DataFrame:
     """
     Processes a DataFrame by cleaning, removing outliers, and preparing for BigQuery upload.
 
@@ -84,7 +86,6 @@ def extract_data(data: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-# Some test
 def remove_outliers(df: pd.DataFrame) -> pd.DataFrame:
     """
     Removes outliers from numeric columns using the Interquartile Range (IQR) method.
